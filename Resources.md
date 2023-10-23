@@ -8,3 +8,4 @@ https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7248143/
 
 # A dataset of neonatal EEG recordings with seizures annotations
 https://zenodo.org/records/2547147
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6400100/
