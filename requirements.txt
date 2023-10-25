@@ -1,12 +1,12 @@
 jupyterlab==4.0.2
 matplotlib==3.7.1
-numpy==1.23.5
+numpy==1.26.1
 pandas==2.0.2
 seaborn==0.12.2
 statsmodels==0.14.0
 scikit-learn==1.2.2
 pydot==1.4.2
-tensorflow
+#tensorflow
 #tensorflow-macos==2.12.0
 #tensorflow-metal==1.0.1
 keras==2.12.0
