@@ -131,3 +131,6 @@ dmypy.json
 
 # Mac Stuff
 .DS_Store
+
+# Data Folder
+data/
