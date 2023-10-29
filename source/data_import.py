@@ -1,7 +1,7 @@
 #%%
 
 from pathlib import Path
-from click import pause
+#from click import pause
 import numpy as np
 import pandas as pd
 import mne
@@ -147,3 +147,5 @@ if __name__ == "__main__":
     patients = import_patients(patient_ids=[2,3,4,8], target_freq=32)
 
 
+
+# %%
