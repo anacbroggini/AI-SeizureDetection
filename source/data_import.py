@@ -47,11 +47,16 @@ def get_patient_list(root_dir=DATA_ROOT, patient_ids=None):
     return patient_list
 
 #%% get session list
-def get_session_list(root_dir=DATA_ROOT, patient='chb01'):
+def get_session_list(root_dir=DATA_ROOT, patient='chb01', seizure_flag=None):
     '''get filenames of sessions for specific patient, ie. ["chb01_01.edf", ...] '''
 
     root_dir = Path(root_dir)
-    session_list = sorted([s.name for s in (root_dir / patient).rglob('*.edf')])
+    if seizure_flag:
+        session_list = sorted([s.name for s in (root_dir / patient).rglob(pattern='*.seizures')])
+        session_list = [s.rstrip('.seizure') for s in session_list]
+    else:
+        session_list = sorted([s.name for s in (root_dir / patient).rglob('*.edf')])
+    
     return session_list
 
 #%% get summary data
@@ -141,7 +146,7 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
 
 #%% load edf
 
-def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256):
+def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizure_flag=False):
     '''load concatenated edf data of specified patients into pandas dataframe with labeled seizures by a list of patient_ids.
     
     root_dir: root directory of data. default: "repository/data/"
@@ -156,7 +161,13 @@ def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256):
     for patient in patient_list:
         summary = get_patient_summary(patient=patient)
         # load edf
-        df_patient = pd.concat([return_pandas_df(patient=patient, session=s, target_freq=target_freq, summary=summary) for s in get_session_list(patient=patient)])
+        df_patient = pd.concat([
+            return_pandas_df(patient=patient, 
+                             session=s, 
+                             target_freq=target_freq, 
+                             summary=summary 
+                             ) for s in get_session_list(patient=patient, seizure_flag=seizure_flag)])
+        
         print(f'patient {patient} sessions concatenated.')
         # new_index = df_patient_list[0].index.union([i.index for i in df_patient_list[1:]])
         df_patient_list.append(df_patient)
@@ -249,8 +260,13 @@ def save_pyarrow_eeg_single(data=None, patient_id=3):
 
 #%%
 if __name__ == "__main__":
-    # assert get_patient_list(patient_ids=[1,2,5]) == ['chb01', 'chb02', 'chb05']
-    # assert get_patient_summary()[3]['seizure_end_time'] == 1066
+    assert get_patient_list(patient_ids=[1,2,5]) == ['chb01', 'chb02', 'chb05']
+    assert get_patient_summary()[3]['seizure_end_time'] == 1066
+
+    patients = import_patients(patient_ids=[1,2,3,12], target_freq=32, seizure_flag=True)
+    print(patients.shape)
+
+
 
     save_pyarrow_eeg_large(patient_ids=[12,2,3,11])
     
