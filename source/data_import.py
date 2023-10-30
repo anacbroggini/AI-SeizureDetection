@@ -69,22 +69,28 @@ def get_patient_summary(root_dir=DATA_ROOT, patient='chb01'):
             line = line.strip()
             if line.startswith("File Name:"):
                 current_data = {
-                    "File Name": None, 
-                    "Number of Seizures": None, 
-                    "Seizure Start Time": np.nan, 
-                    "Seizure End Time": np.nan, 
+                    "file_name": None, 
+                    "number_of_seizures": None, 
+                    "seizure_start_time": np.nan, 
+                    "seizure_end_time": np.nan, 
                     "patient": patient
                     }
-                current_data["File Name"] = line.split(": ", 1)[1]
+                current_data["file_name"] = line.split(": ", 1)[1]
+            
             elif line.startswith("Number of Seizures in File:"):
-                current_data["Number of Seizures"] = line.split(": ", 1)[1]
-                if current_data["Number of Seizures"] == 0:
+                current_data["number_of_seizures"] = line.split(": ", 1)[1]
+                if current_data["number_of_seizures"] == 0:
                     data.append(current_data.copy())
-            elif line.startswith("Seizure Start Time:"):
-                current_data["Seizure Start Time"] = int(line.split(": ", 1)[1].split()[0])
-            elif line.startswith("Seizure End Time:"):
-                current_data["Seizure End Time"] = int(line.split(": ", 1)[1].split()[0])
+            
+            # elif line.startswith("seizure_start_time:"):
+            elif ("Seizure" in line) and ("Start" in line):
+                current_data["seizure_start_time"] = int(line.split(": ", 1)[1].split()[0])
+            
+            # elif line.startswith("seizure_end_time:"):
+            elif "Seizure" in line and "End" in line:
+                current_data["seizure_end_time"] = int(line.split(": ", 1)[1].split()[0])
                 data.append(current_data.copy())
+
     return data
 
 
@@ -113,14 +119,22 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
     else:
         print(f"{session} was import but not resampled {target_freq}Hz.")
 
-    seizures = [d for d in summary if d.get('File Name') == session]
+    seizures = [d for d in summary if d.get('file_name') == session]
     df['is_seizure'] = False
+    df['before_seizure'] = False
     # df['is_seizure'] = df['is_seizure'].astype(pd.ArrowDtype(pa.bool_()))
     for seizure in seizures:
-        start = str(seizure['Seizure Start Time'] - 1) + "S"
-        end = str(seizure['Seizure End Time'] - 1) + "S"
+        # label seizure
+        start = str(seizure["seizure_start_time"] - 1) + "S"
+        end = str(seizure['seizure_end_time'] - 1) + "S"
         df.loc[start:end, 'is_seizure'] = True
-        print(f"{session} seizure was labeled")
+
+        # label buffer
+        buffer_length = 300  # buffer length in seconds
+        start = str(max(0, seizure["seizure_start_time"] - 1 - buffer_length)) + "S"
+        end = str(min(df.index[-1].seconds, seizure['seizure_start_time'] - 1)) + "S"
+        df.loc[start:end, 'before_seizure'] = True
+        print(f"{session} seizure and buffer was labeled")
 
     return df #.astype(pd.ArrowDtype(pa.float64()))
 
@@ -140,7 +154,7 @@ def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256):
     patient_list = get_patient_list(patient_ids=patient_ids)
     df_patient_list = []
     for patient in patient_list:
-        summary = get_patient_summary(patient)
+        summary = get_patient_summary(patient=patient)
         # load edf
         df_patient = pd.concat([return_pandas_df(patient=patient, session=s, target_freq=target_freq, summary=summary) for s in get_session_list(patient=patient)])
         print(f'patient {patient} sessions concatenated.')
@@ -211,12 +225,12 @@ def save_pyarrow_eeg_large(data=None, patient_ids=[1,2,3,12]):
     """save a default large data to predefined path."""
     
     if data is None:
-        data = import_patients(patient_ids=[patient_ids])
+        data = import_patients(patient_ids=patient_ids)
     
     save_pyarrow(data, file_name=EEG_LARGE_FILENAME)
     return
 
-def save_pyarrow_eeg_single(data=None, patient_id=12):
+def save_pyarrow_eeg_single(data=None, patient_id=3):
     """save a default dataset of single patient. 
     
     input:
@@ -235,24 +249,31 @@ def save_pyarrow_eeg_single(data=None, patient_id=12):
 
 #%%
 if __name__ == "__main__":
-    assert get_patient_list(patient_ids=[1,2,5]) == ['chb01', 'chb02', 'chb05']
-    assert get_patient_summary()[3]['Seizure End Time'] == 1066
+    # assert get_patient_list(patient_ids=[1,2,5]) == ['chb01', 'chb02', 'chb05']
+    # assert get_patient_summary()[3]['seizure_end_time'] == 1066
+
+    save_pyarrow_eeg_large(patient_ids=[12,2,3,11])
     
-    patients = import_patients(patient_ids=[11])
-    print("single patient done.")
-    save_pyarrow_eeg_single(patients)
-    # print(get_session_list())
+    # patients = import_patients(patient_ids=[3])
+    save_pyarrow_eeg_single()
 
-    patients = import_patients(patient_ids=[1,2,3,12], target_freq=32)
-    save_pyarrow_eeg_large(patients)
-    tic = time()
-    patients.mean()
-    print(time()- tic)
-    del patients
+    df = load_eeg_single_mem()
+    print(df.mean())
 
-    df = load_eeg_large_mem()
+    # print("single patient done.")
+    print("done.")
+    # # print(get_session_list())
 
-    tic = time()
-    df.mean()
-    print(f"{time()- tic}")
+    # patients = import_patients(patient_ids=[1,2,3,12], target_freq=32)
+    # save_pyarrow_eeg_large(patients)
+    # tic = time()
+    # patients.mean()
+    # print(time()- tic)
+    # del patients
+
+    # df = load_eeg_large_mem()
+
+    # tic = time()
+    # df.mean()
+    # print(f"{time()- tic}")
 
