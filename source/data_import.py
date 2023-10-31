@@ -232,7 +232,8 @@ def load_eeg_single_mem():
         warnings.warn(f"FileNotFoundError: {e}")
     return 
 
-def save_pyarrow_eeg_large(data=None, patient_ids=[1,2,3,12]):
+def save_pyarrow_eeg_large(data=None, patient_ids=[1,2,3,4]):
+
     """save a default large data to predefined path."""
     
     if data is None:
@@ -241,7 +242,9 @@ def save_pyarrow_eeg_large(data=None, patient_ids=[1,2,3,12]):
     save_pyarrow(data, file_name=EEG_LARGE_FILENAME)
     return
 
-def save_pyarrow_eeg_single(data=None, patient_id=3):
+
+def save_pyarrow_eeg_single(data=None, patient_id=[1,2,3,4]):
+
     """save a default dataset of single patient. 
     
     input:
@@ -260,15 +263,16 @@ def save_pyarrow_eeg_single(data=None, patient_id=3):
 
 #%%
 if __name__ == "__main__":
-    assert get_patient_list(patient_ids=[1,2,5]) == ['chb01', 'chb02', 'chb05']
+
+    assert get_patient_list(patient_ids=[1,2,3,4]) == ['chb01', 'chb02', 'chb03', 'chb04']
     assert get_patient_summary()[3]['seizure_end_time'] == 1066
 
-    patients = import_patients(patient_ids=[1,2,3,12], target_freq=32, seizure_flag=True)
+    patients = import_patients(patient_ids=[1,2,3,4], target_freq=32, seizure_flag=True)
     print(patients.shape)
 
 
+    save_pyarrow_eeg_large(patient_ids=[1,2,3,4])
 
-    save_pyarrow_eeg_large(patient_ids=[12,2,3,11])
     
     # patients = import_patients(patient_ids=[3])
     save_pyarrow_eeg_single()
