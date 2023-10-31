@@ -243,7 +243,7 @@ def save_pyarrow_eeg_large(data=None, patient_ids=[1,2,3,4]):
     return
 
 
-def save_pyarrow_eeg_single(data=None, patient_id=patient_ids):
+def save_pyarrow_eeg_single(data=None, patient_id=[1,2,3,4]):
 
     """save a default dataset of single patient. 
     
