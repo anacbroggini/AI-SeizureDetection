@@ -15,6 +15,7 @@ def filter_eeg_channels(df, channels=channels, fs=256, exclude_ranges=None, Q=30
     Returns:
     - filtered_df: DataFrame with filtered EEG data.
     """
+
     filtered_df = df[channels].copy()
     filtered_df[['is_seizure','before_seizure']] = df[['before_seizure','is_seizure']]
     
