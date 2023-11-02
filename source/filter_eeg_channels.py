@@ -1,7 +1,7 @@
 import pandas as pd
 from scipy.signal import butter, lfilter
 
-def filter_eeg_channels(df, channels=channels, fs=256, exclude_ranges=None, Q=30):
+def filter_eeg_channels(df, channels, fs=256, exclude_ranges=None, Q=30):
     """
     Filter EEG channels in a DataFrame using band-stop filters.
 
@@ -17,7 +17,7 @@ def filter_eeg_channels(df, channels=channels, fs=256, exclude_ranges=None, Q=30
     """
 
     filtered_df = df[channels].copy()
-    filtered_df[['is_seizure','before_seizure']] = df[['before_seizure','is_seizure']]
+    filtered_df[['is_seizure','before_seizure']] = df[['is_seizure','before_seizure']]
     
     if exclude_ranges is None:
         exclude_ranges = []
