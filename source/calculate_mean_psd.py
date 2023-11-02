@@ -1,8 +1,10 @@
 import pandas as pd
 import numpy as np
 from scipy.signal import welch
+from source.constants import FREQUENCY_RANGES
+from source.constants import CHANNELS
 
-def calculate_mean_psd(data_df, fs, nperseg, noverlap, frequency_ranges):
+def calculate_mean_psd(data_df, fs=256, nperseg=256, noverlap=128, frequency_ranges=FREQUENCY_RANGES):
     """
     Calculate mean Power Spectral Density (PSD) for each channel in the DataFrame
     within specified frequency ranges.
@@ -17,10 +19,24 @@ def calculate_mean_psd(data_df, fs, nperseg, noverlap, frequency_ranges):
     Returns:
         dict: A dictionary of mean PSD results for each channel and frequency range.
     """
+    
+    if type(data_df) is pd.core.frame.Series:
+        data_df = pd.DataFrame(data_df)
+
+    # if fs is None:
+    #     if data_df.index.freq is None:
+    #         freq = pd.infer_freq(data_df.index)
+    #         data_df.index.freq = pd.tseries.frequencies.to_offset(freq)
+    #     fs = 1.0  (data_df.index.freq / 10E9)
+    #     print(fs)
+
     mean_psd_results = {}
 
-# Iterate through the columns (channels) of the DataFrame
-    for channel in data_df.columns[:len(data_df.columns)-5]:
+
+    # Iterate through the columns (channels) of the DataFrame
+    for channel in CHANNELS:
+        if channel not in data_df.columns:
+            continue
         # Calculate the PSD for the current channel
         f, Pxx = welch(data_df[channel], fs=fs, nperseg=nperseg, noverlap=noverlap, detrend="constant", scaling="density")
 

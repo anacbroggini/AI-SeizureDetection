@@ -12,3 +12,12 @@ CHANNELS = [
     'FP1-F3', 
     'CZ-PZ'
     ]
+
+
+FREQUENCY_RANGES = {
+    'Delta': (0.5, 4),
+    'Theta': (4, 8),
+    'Alpha': (8, 13),
+    'Beta': (13, 30),
+    'Gamma': (30, 50),
+}
