@@ -208,8 +208,9 @@ def load_pyarrow(path_name=DATA_ROOT, file_name='pyarrow_df'):
         source = pa.memory_map(str(arrow_filepath), 'r')
         print(f"{str(arrow_filepath)} was loaded.")
         arrow_patient_df = pa.ipc.RecordBatchFileReader(source).read_pandas()
-        freq = pd.infer_freq(arrow_patient_df.index)
-        arrow_patient_df.index.freq = pd.tseries.frequencies.to_offset(freq)
+        if type(arrow_patient_df.index) is pd.core.indexes.timedeltas.TimedeltaIndex:
+            freq = pd.infer_freq(arrow_patient_df.index)
+            arrow_patient_df.index.freq = pd.tseries.frequencies.to_offset(freq)
 
         return arrow_patient_df
     except FileNotFoundError as e:
