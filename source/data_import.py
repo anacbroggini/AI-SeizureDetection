@@ -51,10 +51,17 @@ def get_session_list(root_dir=DATA_ROOT, patient='chb01', seizure_flag=None):
     '''get filenames of sessions for specific patient, ie. ["chb01_01.edf", ...] '''
 
     root_dir = Path(root_dir)
-    if seizure_flag:
+    if seizure_flag is True:
+        # filter only edf files with seizures
         session_list = sorted([s.name for s in (root_dir / patient).rglob(pattern='*.seizures')])
         session_list = [s.rstrip('.seizure') for s in session_list]
-    else:
+    elif seizure_flag is False:
+        # filter only edf files without seizures
+        exclude_list = sorted([s.name for s in (root_dir / patient).rglob(pattern='*.seizures')])
+        exclude_list = [s.rstrip('.seizure') for s in exclude_list]
+        session_list = sorted([s.name for s in (root_dir / patient).rglob('*.edf') if s.name not in exclude_list])
+    elif seizure_flag is None:
+        # get all edf files
         session_list = sorted([s.name for s in (root_dir / patient).rglob('*.edf')])
     
     return session_list
@@ -101,7 +108,7 @@ def get_patient_summary(root_dir=DATA_ROOT, patient='chb01'):
 
 ### function import_eeg_data
 #%%
-def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq=None, summary=None):
+def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq=256, summary=None):
     ''' Read specific session .edf, transform to pandas dataframe with timedelta index, optional resampling, labeling seizures in "is_seizure" column.
     
     returns pandas dataframe of session.
@@ -123,10 +130,10 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
         print(f"{session} was imported and resampled.")
     else:
         print(f"{session} was import but not resampled {target_freq}Hz.")
-
-    seizures = [d for d in summary if d.get('file_name') == session]
+    
     df['is_seizure'] = False
     df['before_seizure'] = False
+    seizures = [d for d in summary if d.get('file_name') == session]
     # df['is_seizure'] = df['is_seizure'].astype(pd.ArrowDtype(pa.bool_()))
     for seizure in seizures:
         # label seizure
@@ -141,17 +148,18 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
         df.loc[start:end, 'before_seizure'] = True
         print(f"{session} seizure and buffer was labeled")
 
-    return df #.astype(pd.ArrowDtype(pa.float64()))
+    return df, bool(len(seizures)) #.astype(pd.ArrowDtype(pa.float64()))
 
 
 #%% load edf
 
-def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizure_flag=False):
+def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizure_flag=None):
     '''load concatenated edf data of specified patients into pandas dataframe with labeled seizures by a list of patient_ids.
     
     root_dir: root directory of data. default: "repository/data/"
     patient_ids: list of integers defining the patients. if None: all patients are imported. default: [1]
     target_freq: target freqency in Hz to return the dataframe. If None no resampling is done.
+    seizure_flag: True/False/None. True return all content of 
 
     returns: pandas dataframe
     '''
@@ -159,6 +167,7 @@ def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizur
     patient_list = get_patient_list(patient_ids=patient_ids)
     df_patient_list = []
     for patient in patient_list:
+
         summary = get_patient_summary(patient=patient)
         # load edf
         df_patient = pd.concat([
@@ -181,7 +190,7 @@ def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizur
     patient_all = patient_all.set_index(new_index)
     return patient_all #.astype(pd.ArrowDtype(pa.float64()))
 
-
+### Functions for saving and memory mapping dataframes
 def save_pyarrow(data=None, path_name=DATA_ROOT, file_name='pyarrow_df'):
     '''save dataframe to disc, which can then also loaded by memory-mapping.'''
     
@@ -269,24 +278,32 @@ def save_pyarrow_eeg_single(data=None, patient_id=[1,2,3,4]):
 #%%
 if __name__ == "__main__":
 
-    assert get_patient_list(patient_ids=[1,2,3,4]) == ['chb01', 'chb02', 'chb03', 'chb04']
-    assert get_patient_summary()[3]['seizure_end_time'] == 1066
+    # assert get_patient_list(patient_ids=[1,2,3,4]) == ['chb01', 'chb02', 'chb03', 'chb04']
+    # assert get_patient_summary()[3]['seizure_end_time'] == 1066
 
-    patients = import_patients(patient_ids=[1,2,3,4], target_freq=32, seizure_flag=True)
-    print(patients.shape)
+    l = get_session_list(seizure_flag=True)
+    print(l)
+    l = get_session_list(seizure_flag=False)
+    print(l)
+    l = get_session_list(seizure_flag=None)
+    print(l)
 
 
-    save_pyarrow_eeg_large(patient_ids=[1,2,3,4])
+    # patients = import_patients(patient_ids=[1,2,3,4], target_freq=32, seizure_flag=True)
+    # print(patients.shape)
+
+
+    # save_pyarrow_eeg_large(patient_ids=[1,2,3,4])
 
     
     # patients = import_patients(patient_ids=[3])
-    save_pyarrow_eeg_single()
+    # save_pyarrow_eeg_single()
 
-    df = load_eeg_single_mem()
-    print(df.mean())
+    # df = load_eeg_single_mem()
+    # print(df.mean())
 
     # print("single patient done.")
-    print("done.")
+    # print("done.")
     # # print(get_session_list())
 
     # patients = import_patients(patient_ids=[1,2,3,12], target_freq=32)
