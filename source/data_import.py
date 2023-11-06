@@ -190,6 +190,142 @@ def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizur
     patient_all = patient_all.set_index(new_index)
     return patient_all #.astype(pd.ArrowDtype(pa.float64()))
 
+
+### Add Segmentation functions to the loading of data
+
+def ictal_segmentation(df, epoch=0, duration_segment=10, nr_segments = 20):
+    '''segment for ictal intervals. it adds as many ictal segments as available and fills them up with pre-ictal segments to reach the total nr of segments.
+    
+    if end of data is reached before the end of seizure, only this part of seizure will be used.
+    
+    '''
+
+    # how to validate nr_segments is well chosen? 
+    df['segment_id'] = 0
+    ictal_epochs = []
+    # for time, seizure in (s_df[s_df == True]).items():
+    for ep_start, seizure in df.loc[df['seizure_start'] == True, 'seizure_start'].items():
+        ictal_segments = []
+        segment_id = 1
+        seg_start = ep_start
+        while True:
+            # get previous duration_segment duration in seconds
+            seg_end = seg_start + (pd.Timedelta(seconds=duration_segment)) - df.index.freq
+            if seg_end > df.index[-1]:
+                print(f"reached end of data. epoch number: {epoch}, number of segments completed: {segment_id-1}")
+                break
+            
+            ictal_seg = df.loc[seg_start: seg_end, :].copy()
+            ictal_seg['segment_id'] = segment_id
+        
+            # check if is_seizure in it AND if all are before_seizure
+            # s_int.loc['10S', 'is_seizure'] = True  # check
+            if not all(ictal_seg['is_seizure']):
+                print(f"seizure end reached. epoch number: {epoch}, number of segments completed: {segment_id-1}")
+                break # get out of while loop
+            
+            ictal_segments.append(ictal_seg)
+            seg_start =  seg_end + df.index.freq
+            segment_id += 1
+        
+        print(f"adding {segment_id-1} ictal segments to epoch {epoch}.") # segment_id is already incremented, but starts with 0: x-1+1=x
+        if len(ictal_segments) == 0:
+            print("first ictal segment is too small.")
+            continue
+        else:
+            ictal_epoch = pd.concat(ictal_segments)
+        
+        ### get missing (pre-ictal) segments before ictal
+        segments_missing = nr_segments - (segment_id - 1)
+        # calc start / end: 
+        preictal_start = ep_start - segments_missing * pd.Timedelta(seconds=duration_segment)
+        preictal_end = ep_start - df.index.freq
+
+        # validate target epoch is within dataframe
+        if preictal_start < df.index[0]:
+            print(f"preictal interval is not fully covered by datafile! skipping ...")
+            break
+        # get_signal: 
+        preictal_ep = df.loc[preictal_start:preictal_end, :].copy()
+        # validate signal is not ictal
+        if any(preictal_ep['is_seizure']):
+            print(f"overlapping ictal interval for this episode. skipping ...")
+            break
+        
+        # merge with ictal part of interval
+        print(f"adding {segments_missing} pre-ictal segments to epoch {epoch}.")
+        # full_epoch = preictal_ep.join(ictal_epoch)
+        full_epoch = pd.concat([preictal_ep, ictal_epoch])
+        # set segment_ids
+        full_epoch['segment_id'] = [i for i in range(nr_segments) for _ in range(int(len(full_epoch)/nr_segments))]
+        full_epoch['epoch'] = epoch
+        epoch += 1
+
+        # add full epoch to epoch list
+        ictal_epochs.append(full_epoch)
+    
+    return ictal_epochs
+
+def inter_segmentation(df, epoch=0, duration_segment=10, nr_segments=20):
+    '''segment function that just adds an "epoch" from the middle of a seizure free datafile.'''
+    
+    # from 20 min in the dataframe, get the segments
+    start = df.index[-1] // 2
+    segments = df.loc[start:start + pd.Timedelta(seconds = nr_segments * duration_segment), :].copy()
+    # add segment numbers and epoch id
+    segments['epoch'] = epoch
+    segments['segment_id'] = [i for i in range(nr_segments) for _ in range(int(len(segments)/nr_segments))]
+    return segments
+
+
+def load_segmented_data(root_dir=DATA_ROOT, 
+                        patient_ids=[1], 
+                        target_freq=256,
+                        nr_segments=15,
+                        segment_duration=20,
+                        ictal_segmentation_foo=ictal_segmentation,
+                        preictal_segmentation_foo=inter_segmentation
+                        ):
+
+    patient_list = get_patient_list(patient_ids=patient_ids)
+
+    epoch_counter = 0
+    df_patients = []
+    for patient in patient_list:
+
+        summary = get_patient_summary(patient=patient)
+
+        session_list = sorted([s.name for s in (root_dir / patient).rglob('*.edf')])
+        session_dfs = []
+
+        for session in session_list:
+            df, is_seizure = return_pandas_df(patient=patient, session=session, summary=summary)
+            df['seizure_start'] = df['is_seizure'] & ~df['is_seizure'].shift(fill_value=False)
+            if is_seizure:
+                # session_dfs.append(ictal_segmentation(df, epoch = epoch_counter))
+                session_dfs.extend(ictal_segmentation(
+                    df, 
+                    epoch = epoch_counter, 
+                    duration_segment=segment_duration, 
+                    nr_segments=nr_segments)
+                )
+            else:
+                session_dfs.append(inter_segmentation(
+                    df, 
+                    epoch = epoch_counter, 
+                    duration_segment=segment_duration, 
+                    nr_segments=nr_segments)
+                )
+
+            epoch_counter = session_dfs[-1]['epoch'].max() + 1
+        
+        df_patients.extend(session_dfs)
+
+    output = pd.concat(df_patients)
+    return output
+
+
+
 ### Functions for saving and memory mapping dataframes
 def save_pyarrow(data=None, path_name=DATA_ROOT, file_name='pyarrow_df'):
     '''save dataframe to disc, which can then also loaded by memory-mapping.'''
@@ -278,17 +414,19 @@ def save_pyarrow_eeg_single(data=None, patient_id=[1,2,3,4]):
 #%%
 if __name__ == "__main__":
 
-    # assert get_patient_list(patient_ids=[1,2,3,4]) == ['chb01', 'chb02', 'chb03', 'chb04']
-    # assert get_patient_summary()[3]['seizure_end_time'] == 1066
-
-    l = get_session_list(seizure_flag=True)
-    print(l)
-    l = get_session_list(seizure_flag=False)
-    print(l)
-    l = get_session_list(seizure_flag=None)
-    print(l)
+    assert get_patient_list(patient_ids=[1,2,3,4]) == ['chb01', 'chb02', 'chb03', 'chb04']
+    assert get_patient_summary()[3]['seizure_end_time'] == 1066
 
 
+    nr_segments = 20
+    segment_duration = 10
+    freq = 256
+    output = load_segmented_data(patient_ids=[1,2], nr_segments=nr_segments, segment_duration=segment_duration)
+    assert output[['epoch']].value_counts()[0] == segment_duration * nr_segments * freq
+    assert all(element == output[['epoch']].value_counts()[0] for element in output[['epoch']].value_counts())
+    assert all(element == (output['epoch'].max() + 1) * segment_duration * freq for element in output['segment_id'].value_counts())
+
+    
     # patients = import_patients(patient_ids=[1,2,3,4], target_freq=32, seizure_flag=True)
     # print(patients.shape)
 
