@@ -229,7 +229,11 @@ def ictal_segmentation(df, epoch=0, duration_segment=10, nr_segments = 20):
             segment_id += 1
         
         print(f"adding {segment_id-1} ictal segments to epoch {epoch}.") # segment_id is already incremented, but starts with 0: x-1+1=x
-        ictal_epoch = pd.concat(ictal_segments)
+        if len(ictal_segments) == 0:
+            print("first ictal segment is too small.")
+            continue
+        else:
+            ictal_epoch = pd.concat(ictal_segments)
         
         ### get missing (pre-ictal) segments before ictal
         segments_missing = nr_segments - (segment_id - 1)
