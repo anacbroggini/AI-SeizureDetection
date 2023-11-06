@@ -12,7 +12,7 @@ CHANNELS = [
     'FP1-F3', 
     'CZ-PZ'
     ]
-
+#FZ-CZ, F3-C3, and P3-O1
 
 FREQUENCY_RANGES = {
     'Delta': (0.5, 4),
