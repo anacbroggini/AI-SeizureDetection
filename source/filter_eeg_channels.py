@@ -17,7 +17,7 @@ def filter_eeg_channels(df, channels, fs=256, exclude_ranges=None, Q=30):
     """
 
     filtered_df = df[channels].copy()
-    filtered_df[['is_seizure','before_seizure']] = df[['is_seizure','before_seizure']]
+    filtered_df[['is_seizure','before_seizure', 'seizure_start','epoch','segment_id']] = df[['is_seizure','before_seizure', 'seizure_start','epoch','segment_id']]
     
     if exclude_ranges is None:
         exclude_ranges = []
