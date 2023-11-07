@@ -176,7 +176,7 @@ def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizur
                              session=s, 
                              target_freq=target_freq, 
                              summary=summary 
-                             ) for s in get_session_list(patient=patient, seizure_flag=seizure_flag)])
+                             )[0] for s in get_session_list(patient=patient, seizure_flag=seizure_flag)])
         
         print(f'patient {patient} sessions concatenated.')
         # new_index = df_patient_list[0].index.union([i.index for i in df_patient_list[1:]])
