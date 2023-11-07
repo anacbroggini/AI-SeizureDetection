@@ -12,7 +12,7 @@ CHANNELS = [
     'FP1-F3', 
     'CZ-PZ'
     ]
-#FZ-CZ, F3-C3, and P3-O1
+
 
 FREQUENCY_RANGES = {
     'Delta': (0.5, 4),
@@ -21,3 +21,6 @@ FREQUENCY_RANGES = {
     'Beta': (13, 30),
     'Gamma': (30, 50),
 }
+
+#DEFAULT_PATIENTS = [1, 2, 3, 4, 5, 7, 8, 9, 11, 17, 18, 19] 
+DEFAULT_PATIENTS = [1, 2, 3, 4, 5, 7, 8, 9, 11, 17, 18, 19, 21, 22]
