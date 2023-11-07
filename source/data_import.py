@@ -209,6 +209,10 @@ def ictal_segmentation(df, epoch=0, duration_segment=10, nr_segments = 20):
         segment_id = 1
         seg_start = ep_start
         while True:
+            if segment_id > 0.66 * nr_segments:
+                print(f"reached maximum ratio for seizure segments ({segment_id - 1}). skipping further segments ...")
+                break
+
             # get previous duration_segment duration in seconds
             seg_end = seg_start + (pd.Timedelta(seconds=duration_segment)) - df.index.freq
             if seg_end > df.index[-1]:
