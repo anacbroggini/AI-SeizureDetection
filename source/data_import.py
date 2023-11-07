@@ -16,6 +16,7 @@ execution functions:
 #%%
 
 from pathlib import Path
+from matplotlib.artist import get
 import numpy as np
 import pyarrow as pa
 import pandas as pd
@@ -329,6 +330,28 @@ def load_segmented_data(root_dir=DATA_ROOT,
     return output
 
 
+### get all seizure length
+
+def get_seizures_per_patient(patient_ids):
+    '''return a list of seizure lengths in seconds for all seizures of all given patients.'''
+    patient_list = get_patient_list(patient_ids=patient_ids)
+    seizures_per_patient = []
+    for patient in patient_list:
+        sessions = get_session_list()
+        summary = get_patient_summary(patient=patient)
+        seizures_per_patient.append(len(summary))
+    return seizures_per_patient
+
+def get_seizure_lengths(patient_ids):
+    '''return a list of seizure lengths in seconds for all seizures of all given patients.'''
+    patient_list = get_patient_list(patient_ids=patient_ids)
+    seizure_lengths = []
+    for patient in patient_list:
+        sessions = get_session_list()
+        summary = get_patient_summary(patient=patient)
+        seizure_lengths.extend([seizure['seizure_end_time'] - seizure['seizure_start_time'] for seizure in summary if seizure['seizure_end_time'] != np.nan])
+    return seizure_lengths
+    
 
 ### Functions for saving and memory mapping dataframes
 def save_pyarrow(data=None, path_name=DATA_ROOT, file_name='pyarrow_df'):
@@ -418,10 +441,14 @@ def save_pyarrow_eeg_single(data=None, patient_id=[1,2,3,4]):
 #%%
 if __name__ == "__main__":
 
+    
+
+    # test get_patient_list
     assert get_patient_list(patient_ids=[1,2,3,4]) == ['chb01', 'chb02', 'chb03', 'chb04']
+    # test get_patient_summary
     assert get_patient_summary()[3]['seizure_end_time'] == 1066
 
-
+    # test segmented data retrieval
     nr_segments = 20
     segment_duration = 10
     freq = 256

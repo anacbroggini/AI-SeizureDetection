@@ -21,3 +21,5 @@ FREQUENCY_RANGES = {
     'Beta': (13, 30),
     'Gamma': (30, 50),
 }
+
+DEFAULT_PATIENTS = [1, 2, 3, 4, 5, 7, 8, 9, 11, 17, 18, 19, 21, 22]
