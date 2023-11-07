@@ -110,14 +110,23 @@ def get_patient_summary(root_dir=DATA_ROOT, patient='chb01'):
 
 ### function import_eeg_data
 #%%
-def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq=256, summary=None):
+def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq=256, summary=None, channels=None):
     ''' Read specific session .edf, transform to pandas dataframe with timedelta index, optional resampling, labeling seizures in "is_seizure" column.
     
     returns pandas dataframe of session.
     '''
+    
+    ch = channels.copy()
+    if 'T8-P8-1' in ch:
+        ch.remove('T8-P8-1')
+        ch.append('T8-P8')
+    if 'T8-P8-0' in ch:
+        ch.remove('T8-P8-0')
+        ch.append('T8-P8')
+    
     file_path = root_dir / patient / session
-
-    raw = mne.io.read_raw_edf(file_path, preload=False, verbose="ERROR")
+        
+    raw = mne.io.read_raw_edf(file_path, preload=False, include=ch, verbose='ERROR')
     
     sample_freq = str(1/raw.info['sfreq'] * 1E9) + 'N'
     df = raw.to_data_frame(index='time')
@@ -313,7 +322,8 @@ def load_segmented_data(root_dir=DATA_ROOT,
                         nr_segments=15,
                         segment_duration=20,
                         ictal_segmentation_foo=ictal_segmentation,
-                        preictal_segmentation_foo=inter_segmentation
+                        preictal_segmentation_foo=inter_segmentation,
+                        channels=None
                         ):
 
     global segmentation_report
@@ -339,7 +349,7 @@ def load_segmented_data(root_dir=DATA_ROOT,
         session_dfs = []
 
         for session in session_list:
-            df, is_seizure = return_pandas_df(patient=patient, session=session, summary=summary)
+            df, is_seizure = return_pandas_df(patient=patient, session=session, summary=summary, channels=channels)
             df['seizure_start'] = df['is_seizure'] & ~df['is_seizure'].shift(fill_value=False)
             if is_seizure:
                 # session_dfs.append(ictal_segmentation(df, epoch = epoch_counter))
