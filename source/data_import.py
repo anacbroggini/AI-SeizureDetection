@@ -26,6 +26,7 @@ import mne
 from time import time 
 import warnings
 
+
 DATA_ROOT = Path(__file__).resolve().parent / "../data"
 EEG_LARGE_FILENAME = "eeg_large.arrow"
 EEG_SINGLE_FILENAME = "eeg_single.arrow"
@@ -109,14 +110,23 @@ def get_patient_summary(root_dir=DATA_ROOT, patient='chb01'):
 
 ### function import_eeg_data
 #%%
-def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq=256, summary=None):
+def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq=256, summary=None, channels=None):
     ''' Read specific session .edf, transform to pandas dataframe with timedelta index, optional resampling, labeling seizures in "is_seizure" column.
     
     returns pandas dataframe of session.
     '''
+    
+    ch = channels.copy()
+    if 'T8-P8-1' in ch:
+        ch.remove('T8-P8-1')
+        ch.append('T8-P8')
+    if 'T8-P8-0' in ch:
+        ch.remove('T8-P8-0')
+        ch.append('T8-P8')
+    
     file_path = root_dir / patient / session
-
-    raw = mne.io.read_raw_edf(file_path, preload=False, verbose="ERROR")
+        
+    raw = mne.io.read_raw_edf(file_path, preload=False, include=ch, verbose='ERROR')
     
     sample_freq = str(1/raw.info['sfreq'] * 1E9) + 'N'
     df = raw.to_data_frame(index='time')
@@ -194,6 +204,11 @@ def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizur
 
 ### Add Segmentation functions to the loading of data
 
+def add_segmentation_report(report, key, value):
+        report[key].append(value)
+        return report
+
+
 def ictal_segmentation(df, epoch=0, duration_segment=10, nr_segments = 20):
     '''segment for ictal intervals. it adds as many ictal segments as available and fills them up with pre-ictal segments to reach the total nr of segments.
     
@@ -201,9 +216,13 @@ def ictal_segmentation(df, epoch=0, duration_segment=10, nr_segments = 20):
     
     '''
 
+    global segmentation_report
+
     # how to validate nr_segments is well chosen? 
     df['segment_id'] = 0
     ictal_epochs = []
+ 
+
     # for time, seizure in (s_df[s_df == True]).items():
     for ep_start, seizure in df.loc[df['seizure_start'] == True, 'seizure_start'].items():
         ictal_segments = []
@@ -212,12 +231,16 @@ def ictal_segmentation(df, epoch=0, duration_segment=10, nr_segments = 20):
         while True:
             if segment_id > 0.66 * nr_segments:
                 print(f"reached maximum ratio for seizure segments ({segment_id - 1}). skipping further segments ...")
+                segmentation_report = add_segmentation_report(
+                    segmentation_report, 'seizure_max_reached', [epoch, seg_start])
                 break
 
             # get previous duration_segment duration in seconds
             seg_end = seg_start + (pd.Timedelta(seconds=duration_segment)) - df.index.freq
             if seg_end > df.index[-1]:
                 print(f"reached end of data. epoch number: {epoch}, number of segments completed: {segment_id-1}")
+                segmentation_report = add_segmentation_report(
+                    segmentation_report, 'reached_file_end', [epoch, seg_start])
                 break
             
             ictal_seg = df.loc[seg_start: seg_end, :].copy()
@@ -236,6 +259,8 @@ def ictal_segmentation(df, epoch=0, duration_segment=10, nr_segments = 20):
         print(f"adding {segment_id-1} ictal segments to epoch {epoch}.") # segment_id is already incremented, but starts with 0: x-1+1=x
         if len(ictal_segments) == 0:
             print("first ictal segment is too small.")
+            segmentation_report = add_segmentation_report(
+                segmentation_report, 'seizure_too_small', [epoch, seg_start])
             continue
         else:
             ictal_epoch = pd.concat(ictal_segments)
@@ -249,13 +274,15 @@ def ictal_segmentation(df, epoch=0, duration_segment=10, nr_segments = 20):
         # validate target epoch is within dataframe
         if preictal_start < df.index[0]:
             print(f"preictal interval is not fully covered by datafile! skipping ...")
-            break
+            segmentation_report = add_segmentation_report(
+                segmentation_report, 'reached_file_start', [epoch, seg_start])
+            continue
         # get_signal: 
         preictal_ep = df.loc[preictal_start:preictal_end, :].copy()
         # validate signal is not ictal
         if any(preictal_ep['is_seizure']):
             print(f"overlapping ictal interval for this episode. skipping ...")
-            break
+            continue
         
         # merge with ictal part of interval
         print(f"adding {segments_missing} pre-ictal segments to epoch {epoch}.")
@@ -268,18 +295,24 @@ def ictal_segmentation(df, epoch=0, duration_segment=10, nr_segments = 20):
 
         # add full epoch to epoch list
         ictal_epochs.append(full_epoch)
+        segmentation_report = add_segmentation_report(
+            segmentation_report, 'ictal_epochs', [epoch, seg_start])
     
     return ictal_epochs
 
 def inter_segmentation(df, epoch=0, duration_segment=10, nr_segments=20):
     '''segment function that just adds an "epoch" from the middle of a seizure free datafile.'''
-    
+
+    global segmentation_report    
+
     # from 20 min in the dataframe, get the segments
     start = df.index[-1] // 2
     segments = df.loc[start:start + pd.Timedelta(seconds = nr_segments * duration_segment), :].copy()
     # add segment numbers and epoch id
     segments['epoch'] = epoch
     segments['segment_id'] = [i for i in range(nr_segments) for _ in range(int(len(segments)/nr_segments))]
+    segmentation_report = add_segmentation_report(
+            segmentation_report, 'interictal_epochs', [epoch, start])
     return segments
 
 
@@ -289,9 +322,21 @@ def load_segmented_data(root_dir=DATA_ROOT,
                         nr_segments=15,
                         segment_duration=20,
                         ictal_segmentation_foo=ictal_segmentation,
-                        preictal_segmentation_foo=inter_segmentation
+                        preictal_segmentation_foo=inter_segmentation,
+                        channels=None
                         ):
 
+    global segmentation_report
+    segmentation_report = {
+        'reached_file_start': [], 
+        'reached_file_end': [],
+        'seizure_too_small': [],
+        'overlapping_seizure': [],
+        'ictal_epochs': [],
+        'interictal_epochs': [],
+        'seizure_max_reached': []
+        }
+    
     patient_list = get_patient_list(patient_ids=patient_ids)
 
     epoch_counter = 0
@@ -304,7 +349,7 @@ def load_segmented_data(root_dir=DATA_ROOT,
         session_dfs = []
 
         for session in session_list:
-            df, is_seizure = return_pandas_df(patient=patient, session=session, summary=summary)
+            df, is_seizure = return_pandas_df(patient=patient, session=session, summary=summary, channels=channels)
             df['seizure_start'] = df['is_seizure'] & ~df['is_seizure'].shift(fill_value=False)
             if is_seizure:
                 # session_dfs.append(ictal_segmentation(df, epoch = epoch_counter))
@@ -321,12 +366,14 @@ def load_segmented_data(root_dir=DATA_ROOT,
                     duration_segment=segment_duration, 
                     nr_segments=nr_segments)
                 )
-
-            epoch_counter = session_dfs[-1]['epoch'].max() + 1
+            if len(session_dfs):
+                epoch_counter = session_dfs[-1]['epoch'].max() + 1
         
         df_patients.extend(session_dfs)
 
     output = pd.concat(df_patients)
+
+    [print(k,len(v)) for k,v in segmentation_report.items()]    
     return output
 
 
@@ -441,7 +488,7 @@ def save_pyarrow_eeg_single(data=None, patient_id=[1,2,3,4]):
 #%%
 if __name__ == "__main__":
 
-    
+    from constants import DEFAULT_PATIENTS
 
     # test get_patient_list
     assert get_patient_list(patient_ids=[1,2,3,4]) == ['chb01', 'chb02', 'chb03', 'chb04']
@@ -452,7 +499,7 @@ if __name__ == "__main__":
     nr_segments = 20
     segment_duration = 10
     freq = 256
-    output = load_segmented_data(patient_ids=[1,2], nr_segments=nr_segments, segment_duration=segment_duration)
+    output = load_segmented_data(patient_ids=DEFAULT_PATIENTS, nr_segments=nr_segments, segment_duration=segment_duration)
     assert output[['epoch']].value_counts()[0] == segment_duration * nr_segments * freq
     assert all(element == output[['epoch']].value_counts()[0] for element in output[['epoch']].value_counts())
     assert all(element == (output['epoch'].max() + 1) * segment_duration * freq for element in output['segment_id'].value_counts())
