@@ -167,7 +167,7 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
 
 #%% load edf
 
-def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizure_flag=None, preseizure_interval=300):
+def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizure_flag=None, channels=None, preseizure_interval=300):
     '''load concatenated edf data of specified patients into pandas dataframe with labeled seizures by a list of patient_ids.
     
     root_dir: root directory of data. default: "repository/data/"
@@ -189,6 +189,7 @@ def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizur
                              session=s, 
                              target_freq=target_freq, 
                              summary=summary,
+                             channels=channels,
                              preseizure_interval=preseizure_interval,
                              )[0] for s in get_session_list(patient=patient, seizure_flag=seizure_flag)])
         
