@@ -110,7 +110,7 @@ def get_patient_summary(root_dir=DATA_ROOT, patient='chb01'):
 
 ### function import_eeg_data
 #%%
-def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq=256, summary=None, channels=None):
+def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq=256, summary=None, channels=None, preseizure_interval=300):
     ''' Read specific session .edf, transform to pandas dataframe with timedelta index, optional resampling, labeling seizures in "is_seizure" column.
     
     returns pandas dataframe of session.
@@ -147,6 +147,7 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
     
     df['is_seizure'] = False
     df['before_seizure'] = False
+    df['file'] = patient + '/' + session
     seizures = [d for d in summary if d.get('file_name') == session]
     # df['is_seizure'] = df['is_seizure'].astype(pd.ArrowDtype(pa.bool_()))
     for seizure in seizures:
@@ -156,7 +157,7 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
         df.loc[start:end, 'is_seizure'] = True
 
         # label buffer
-        buffer_length = 300  # buffer length in seconds
+        buffer_length = preseizure_interval  # buffer length in seconds
         start = str(max(0, seizure["seizure_start_time"] - 1 - buffer_length)) + "S"
         end = str(min(df.index[-1].seconds, seizure['seizure_start_time'] - 2)) + "S"
         df.loc[start:end, 'before_seizure'] = True
@@ -167,7 +168,7 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
 
 #%% load edf
 
-def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizure_flag=None):
+def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizure_flag=None, channels=None, preseizure_interval=300):
     '''load concatenated edf data of specified patients into pandas dataframe with labeled seizures by a list of patient_ids.
     
     root_dir: root directory of data. default: "repository/data/"
@@ -188,7 +189,9 @@ def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizur
             return_pandas_df(patient=patient, 
                              session=s, 
                              target_freq=target_freq, 
-                             summary=summary 
+                             summary=summary,
+                             channels=channels,
+                             preseizure_interval=preseizure_interval,
                              )[0] for s in get_session_list(patient=patient, seizure_flag=seizure_flag)])
         
         print(f'patient {patient} sessions concatenated.')
@@ -413,11 +416,9 @@ def load_segmented_data(root_dir=DATA_ROOT,
         'ictal_epochs': [],
         'preictal_epochs': [],
         'interictal_epochs': [],
-        'seizure_max_reached': []
+        'seizure_max_reached': [],
+        'incomplete_channels': []
         }
-    
-    if target_freq != 256:
-        warnings.warn("target_freq is not 256Hz. Resampling is not fully implemented.")
     
     patient_list = get_patient_list(patient_ids=patient_ids)
 
@@ -431,7 +432,12 @@ def load_segmented_data(root_dir=DATA_ROOT,
         session_dfs = []
 
         for session in session_list:
-            df, is_seizure = return_pandas_df(patient=patient, session=session, summary=summary, channels=channels)
+            df, is_seizure = return_pandas_df(patient=patient, session=session, summary=summary, channels=channels, target_freq=target_freq)
+            if channels is not None and [c for c in channels if c not in df.columns]:
+                print("incomplete channels. skipping ...")
+                segmentation_report = add_segmentation_report(
+                    segmentation_report, 'incomplete_channels', [epoch_counter, session])
+                continue
             df['seizure_start'] = df['is_seizure'] & ~df['is_seizure'].shift(fill_value=False)
             df['target'] = pd.Timedelta(seconds=0)
             if is_seizure:
@@ -571,7 +577,8 @@ def save_pyarrow_eeg_single(data=None, patient_id=[1,2,3,4]):
 #%%
 if __name__ == "__main__":
 
-    from constants import DEFAULT_PATIENTS
+    from constants import DEFAULT_PATIENTS, CHANNELS
+
 
     # test get_patient_list
     assert get_patient_list(patient_ids=[1,2,3,4]) == ['chb01', 'chb02', 'chb03', 'chb04']
@@ -582,10 +589,15 @@ if __name__ == "__main__":
     nr_segments = 20
     segment_duration = 10
     freq = 256
-    output = load_segmented_data(patient_ids=[1], nr_segments=nr_segments, segment_duration=segment_duration)
-    assert output[['epoch']].value_counts()[0] == segment_duration * nr_segments * freq
+    target_freq = 1
+    output = load_segmented_data(patient_ids=[17], 
+                                 nr_segments=nr_segments, 
+                                 segment_duration=segment_duration,
+                                 channels=CHANNELS,
+                                 target_freq=target_freq)
+    assert output[['epoch']].value_counts()[0] == segment_duration * nr_segments * freq * target_freq/freq
     assert all(element == output[['epoch']].value_counts()[0] for element in output[['epoch']].value_counts())
-    assert all(element == (output['epoch'].max() + 1) * segment_duration * freq for element in output['segment_id'].value_counts())
+    assert all(element == (output['epoch'].max() + 1) * segment_duration * freq * target_freq/freq for element in output['segment_id'].value_counts())
 
     output = load_segmented_data(patient_ids=[2], 
                                  ictal_segmentation_foo=preictal_segmentation,
