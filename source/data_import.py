@@ -110,7 +110,7 @@ def get_patient_summary(root_dir=DATA_ROOT, patient='chb01'):
 
 ### function import_eeg_data
 #%%
-def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq=256, summary=None, channels=None):
+def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq=256, summary=None, channels=None, preseizure_interval=300):
     ''' Read specific session .edf, transform to pandas dataframe with timedelta index, optional resampling, labeling seizures in "is_seizure" column.
     
     returns pandas dataframe of session.
@@ -156,7 +156,7 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
         df.loc[start:end, 'is_seizure'] = True
 
         # label buffer
-        buffer_length = 300  # buffer length in seconds
+        buffer_length = preseizure_interval  # buffer length in seconds
         start = str(max(0, seizure["seizure_start_time"] - 1 - buffer_length)) + "S"
         end = str(min(df.index[-1].seconds, seizure['seizure_start_time'] - 2)) + "S"
         df.loc[start:end, 'before_seizure'] = True
@@ -167,7 +167,7 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
 
 #%% load edf
 
-def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizure_flag=None):
+def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizure_flag=None, preseizure_interval=300):
     '''load concatenated edf data of specified patients into pandas dataframe with labeled seizures by a list of patient_ids.
     
     root_dir: root directory of data. default: "repository/data/"
@@ -188,7 +188,8 @@ def import_patients(root_dir=DATA_ROOT, patient_ids=[1], target_freq=256, seizur
             return_pandas_df(patient=patient, 
                              session=s, 
                              target_freq=target_freq, 
-                             summary=summary 
+                             summary=summary,
+                             preseizure_interval=preseizure_interval,
                              )[0] for s in get_session_list(patient=patient, seizure_flag=seizure_flag)])
         
         print(f'patient {patient} sessions concatenated.')
