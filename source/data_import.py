@@ -110,25 +110,12 @@ def get_patient_summary(root_dir=DATA_ROOT, patient='chb01'):
 
 ### function import_eeg_data
 #%%
-<<<<<<< HEAD
-def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq=256, summary=None, channels=None):
-=======
 def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq=256, summary=None, channels=None, preseizure_interval=300):
->>>>>>> main
     ''' Read specific session .edf, transform to pandas dataframe with timedelta index, optional resampling, labeling seizures in "is_seizure" column.
     
     returns pandas dataframe of session.
     '''
     
-<<<<<<< HEAD
-    ch = channels.copy()
-    if 'T8-P8-1' in ch:
-        ch.remove('T8-P8-1')
-        ch.append('T8-P8')
-    if 'T8-P8-0' in ch:
-        ch.remove('T8-P8-0')
-        ch.append('T8-P8')
-=======
     if channels is None:
         ch = None
     else:
@@ -139,7 +126,6 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
         if 'T8-P8-0' in ch:
             ch.remove('T8-P8-0')
             ch.append('T8-P8')
->>>>>>> main
     
     file_path = root_dir / patient / session
         
@@ -241,10 +227,6 @@ def ictal_segmentation(df, epoch=0, duration_segment=10, nr_segments = 20):
     df['segment_id'] = 0
     ictal_epochs = []
  
-<<<<<<< HEAD
-
-=======
->>>>>>> main
     # for time, seizure in (s_df[s_df == True]).items():
     for ep_start, seizure in df.loc[df['seizure_start'] == True, 'seizure_start'].items():
         ictal_segments = []
@@ -398,11 +380,7 @@ def load_segmented_data(root_dir=DATA_ROOT,
                         nr_segments=15,
                         segment_duration=20,
                         ictal_segmentation_foo=ictal_segmentation,
-<<<<<<< HEAD
-                        preictal_segmentation_foo=inter_segmentation,
-=======
                         interictal_segmentation_foo=inter_segmentation,
->>>>>>> main
                         channels=None
                         ):
     """load data from patient edf files and segment it into epochs.
@@ -426,11 +404,8 @@ def load_segmented_data(root_dir=DATA_ROOT,
             'epoch': id of epoch
             'target': seconds from sequence end until seizure start
 
-<<<<<<< HEAD
-=======
     """
 
->>>>>>> main
     global segmentation_report
     segmentation_report = {
         'reached_file_start': [], 
@@ -438,20 +413,14 @@ def load_segmented_data(root_dir=DATA_ROOT,
         'seizure_too_small': [],
         'overlapping_seizure': [],
         'ictal_epochs': [],
-<<<<<<< HEAD
-=======
         'preictal_epochs': [],
->>>>>>> main
         'interictal_epochs': [],
         'seizure_max_reached': []
         }
     
-<<<<<<< HEAD
-=======
     if target_freq != 256:
         warnings.warn("target_freq is not 256Hz. Resampling is not fully implemented.")
     
->>>>>>> main
     patient_list = get_patient_list(patient_ids=patient_ids)
 
     epoch_counter = 0
@@ -615,11 +584,7 @@ if __name__ == "__main__":
     nr_segments = 20
     segment_duration = 10
     freq = 256
-<<<<<<< HEAD
-    output = load_segmented_data(patient_ids=DEFAULT_PATIENTS, nr_segments=nr_segments, segment_duration=segment_duration)
-=======
     output = load_segmented_data(patient_ids=[1], nr_segments=nr_segments, segment_duration=segment_duration)
->>>>>>> main
     assert output[['epoch']].value_counts()[0] == segment_duration * nr_segments * freq
     assert all(element == output[['epoch']].value_counts()[0] for element in output[['epoch']].value_counts())
     assert all(element == (output['epoch'].max() + 1) * segment_duration * freq for element in output['segment_id'].value_counts())
