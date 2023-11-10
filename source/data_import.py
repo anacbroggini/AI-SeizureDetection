@@ -147,6 +147,10 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
     
     df['is_seizure'] = False
     df['before_seizure'] = False
+<<<<<<< Updated upstream
+=======
+    # df['file'] = patient + '/' + session
+>>>>>>> Stashed changes
     seizures = [d for d in summary if d.get('file_name') == session]
     # df['is_seizure'] = df['is_seizure'].astype(pd.ArrowDtype(pa.bool_()))
     for seizure in seizures:
