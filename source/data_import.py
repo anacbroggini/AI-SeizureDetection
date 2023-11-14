@@ -147,7 +147,9 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
     
     df['is_seizure'] = False
     df['before_seizure'] = False
-    df['file'] = patient + '/' + session
+    # df['file'] = patient + '/' + session
+    # df['patient_id'] = str([s for s in patient if s.isdigit()])
+    # df['file_id'] = str([s for s in session if s.isdigit()])
     seizures = [d for d in summary if d.get('file_name') == session]
     # df['is_seizure'] = df['is_seizure'].astype(pd.ArrowDtype(pa.bool_()))
     for seizure in seizures:
@@ -215,7 +217,7 @@ def add_segmentation_report(report, key, value):
         return report
 
 
-def ictal_segmentation(df, epoch=0, duration_segment=10, nr_segments = 20):
+def ictal_segmentation(df, epoch=0, duration_segment=10, nr_segments = 20, **kwargs):
     '''segment for ictal intervals. it adds as many ictal segments as available and fills them up with pre-ictal segments to reach the total nr of segments.
     
     if end of data is reached before the end of seizure, only this part of seizure will be used.
@@ -331,6 +333,7 @@ def preictal_segmentation(df, epoch=0, duration_segment=10, nr_segments=20, seiz
  
     # for time, seizure in (s_df[s_df == True]).items():
     for ep_start, seizure in df.loc[df['seizure_start'] == True, 'seizure_start'].items():
+        ep_start -= pd.Timedelta(seconds=seizure_offset)
         preictal_segments = []
 
         train_length = duration_segment * nr_segments
@@ -349,7 +352,7 @@ def preictal_segmentation(df, epoch=0, duration_segment=10, nr_segments=20, seiz
             continue
         preictal_epoch['segment_id'] = [i for i in range(nr_segments) for _ in range(int(len(preictal_epoch)/nr_segments))] 
         preictal_epoch['epoch'] = epoch
-        preictal_epoch['target'] = ep_start - preictal_epoch.index
+        preictal_epoch['target'] = ep_start - preictal_epoch.index + pd.Timedelta(seizure_offset)
         epoch += 1
         preictal_epochs.append(preictal_epoch)
         segmentation_report = add_segmentation_report(
@@ -380,6 +383,7 @@ def load_segmented_data(root_dir=DATA_ROOT,
                         target_freq=256,
                         nr_segments=15,
                         segment_duration=20,
+                        seizure_offset=0,
                         ictal_segmentation_foo=ictal_segmentation,
                         interictal_segmentation_foo=inter_segmentation,
                         channels=None
@@ -446,14 +450,17 @@ def load_segmented_data(root_dir=DATA_ROOT,
                     df, 
                     epoch = epoch_counter, 
                     duration_segment=segment_duration, 
-                    nr_segments=nr_segments)
+                    nr_segments=nr_segments,
+                    seizure_offset=seizure_offset
+                    )
                 )
             else:
                 session_dfs.append(interictal_segmentation_foo(
                     df, 
                     epoch = epoch_counter, 
                     duration_segment=segment_duration, 
-                    nr_segments=nr_segments)
+                    nr_segments=nr_segments
+                    )
                 )
             if len(session_dfs):
                 epoch_counter = session_dfs[-1]['epoch'].max() + 1
