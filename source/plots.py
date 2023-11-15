@@ -7,7 +7,7 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.metrics import auc, roc_curve
 
-def plot_confusion_matrix(y_true, y_pred):
+def plot_confusion_matrix(y_true, y_pred, cmap='Blues'):
     """plot a confusion matrix with total and relative numbers.
 
     Args:
@@ -48,7 +48,7 @@ def plot_confusion_matrix(y_true, y_pred):
     cm.columns.name = 'Predicted'
     
     # plot the data using the Pandas dataframe. To change the color map, add cmap=..., e.g. cmap = 'rocket_r'
-    sns.heatmap(cm, annot=annot, fmt='', cmap='Blues', cbar=True,
+    sns.heatmap(cm, annot=annot, fmt='', cmap=cmap, cbar=True,
                         xticklabels=labels, yticklabels=labels)
     #plt.savefig(filename)
     plt.show()
