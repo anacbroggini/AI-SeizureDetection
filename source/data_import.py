@@ -592,6 +592,47 @@ def save_pyarrow_eeg_single(data=None, patient_id=[1,2,3,4]):
     return
 
 
+def load_file(file_name):
+    """convenience function for loading npy/arrow.
+
+    Args:
+        file_name: _description_
+
+    Returns:
+        _description_
+    """
+    if file_name.endswith('.arrow'):
+        return load_pyarrow(file_name=file_name)
+    elif file_name.endswith('.npy'):
+        print('loading npy')
+        return np.load('data/' + file_name, allow_pickle=True)
+    else:
+        print('no filename provided, trying npy')
+        try:
+            np.load('data/' + file_name + '.npy', allow_pickle=True)
+        except FileNotFoundError:
+            print('no npy file found, trying arrow')
+            return load_pyarrow(file_name=file_name + '.arrow')
+        
+def save_file(data, file_name):
+    """convenience function for saving npy/arrow.
+
+    Args:
+        data: _description_
+        file_name: _description_
+    """
+    if file_name is None:
+        print('skipping save file.')
+    elif file_name.endswith('.arrow'):
+        save_pyarrow(data, file_name=file_name)
+    elif file_name.endswith('.npy'):
+        print('saving npy')
+        np.save('data/' + file_name, data)
+    else:
+        print('no filetype provided, saving as npy')
+        np.save('data/' + file_name + '.npy', data)
+
+
 #%%
 if __name__ == "__main__":
 
