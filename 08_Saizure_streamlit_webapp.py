@@ -32,12 +32,12 @@ st.subheader("A Visualization of the channels contained in the EEG Dataset")
 if show_visualization1:
     
     
-    image1 = Image.open('/Users/Samet/Documents/Bildung/BootcampSpiced/github_rice_regression/Capstone_project/Channels Frequency.png')
+    image1 = Image.open('.data/Channels Frequency.png')
     st.image(image1, caption='Overlay of Channels on Amplitude/Time axis', use_column_width=True)
 
 st.subheader('Variance plot top ten True/False Seizures')
 if show_visualization2:
-    image2 = Image.open('/Users/Samet/Documents/Bildung/BootcampSpiced/github_rice_regression/Capstone_project/Variance plot top ten TrueFalse Seizures.png')
+    image2 = Image.open('.data/Variance plot top ten TrueFalse Seizures.png')
     st.image(image2, caption='Variance plot top ten True/False Seizures', use_column_width=True)
 
 st.text("")
