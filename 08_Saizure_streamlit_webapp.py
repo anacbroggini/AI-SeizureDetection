@@ -8,11 +8,14 @@ from mne.io import  read_raw_edf
 import matplotlib.pyplot as plt
 import seaborn as sns
 from source import data_import
+from filter_eeg_channels_web import filter_eeg_channels
 import joblib
 import tempfile
 import os
-
-
+from source.constants import CHANNELS, FREQUENCY_RANGES
+import extract_features
+import scipy
+from scipy.signal import butter, lfilter
 
 st.title("Sa.i.zure")
 st.markdown("AI based seizure detection")
@@ -21,6 +24,10 @@ st.header("Data Exploration")
 st.markdown("EEG data from CHb-MIT dataset --add more here--")
 
 from PIL import Image
+
+# Load the saved classification model
+model_path = "best_model.joblib"  
+loaded_model = joblib.load(model_path)
 
 # Checkboxes to toggle visibility
 show_visualization1 = st.sidebar.checkbox("Show Channels Frequency", value=True)
@@ -32,31 +39,29 @@ st.subheader("A Visualization of the channels contained in the EEG Dataset")
 if show_visualization1:
     
     
-    image1 = Image.open('.data/Channels Frequency.png')
+    image1 = Image.open('./data/Channels Frequency.png')
     st.image(image1, caption='Overlay of Channels on Amplitude/Time axis', use_column_width=True)
 
 st.subheader('Variance plot top ten True/False Seizures')
 if show_visualization2:
-    image2 = Image.open('.data/Variance plot top ten TrueFalse Seizures.png')
+    image2 = Image.open('./data/Variance plot top ten TrueFalse Seizures.png')
     st.image(image2, caption='Variance plot top ten True/False Seizures', use_column_width=True)
 
 st.text("")
 st.text("Dataset description --add more here--")
 
 """
-# My first Classification ML app
+# Classification  Webapp 
 Here's our first attempt at using data to create a classification report from User Inpuy:
 """
-
-"""## Input parameters"""
-
-
 
 # Function to read EDF file and convert to DataFrame
 def read_edf_file(file_path):
     raw = mne.io.read_raw_edf(file_path, preload=True)
     df = raw.to_data_frame()
     return df
+
+
 
 # Define the Streamlit app
 def main():
@@ -106,15 +111,22 @@ def main():
                 temp_file.write(uploaded_file_classifier.read())
                 temp_file.close()
 
-            # Read the EDF file and convert to DataFrame (you can use the preprocessing function here)
-            edf_df_classifier = read_edf_file(temp_filepath)
+            # Read and preprocess the EDF file
+            edf_df_classifier = data_import.load_segmented_unlabeled_data(temp_filepath, channels=CHANNELS)
+            
+
+            exclude_ranges=[[58, 62], [118, 122]]
+            filtered = filter_eeg_channels_web(edf_df_classifier, CHANNELS, fs=256, exclude_ranges=exclude_ranges, Q=30)
+                
+            # Extract features from the preprocessed data
+            extracted_features = extract_features(filtered)
 
             # Perform classification using the loaded model
-            # ...
+            predictions = loaded_model.predict(extracted_features) 
 
             # Display the classification result
             st.subheader('Classification Result:')
-            # ...
+            st.write(predictions)
 
         except Exception as e:
             st.error(f'An error occurred during classification: {e}')

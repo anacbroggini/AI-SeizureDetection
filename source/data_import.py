@@ -132,7 +132,11 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
     raw = mne.io.read_raw_edf(file_path, preload=False, include=ch, verbose='ERROR')
     
     sample_freq = str(1/raw.info['sfreq'] * 1E9) + 'N'
-    df = raw.to_data_frame(index='time')
+    try:
+        df = raw.to_data_frame(index='time')
+    except ValueError:
+        print(f"couldnt load datafile {patient + session}")
+        return None,None
     time_index = pd.timedelta_range(start=0, periods=df.shape[0], freq=sample_freq)
     df = df.set_index(time_index)
     # df = df.copy().astype('double[pyarrow]')
@@ -367,15 +371,61 @@ def inter_segmentation(df, epoch=0, duration_segment=10, nr_segments=20):
 
     global segmentation_report    
 
+    inter_ictal_buffer= pd.Timedelta(seconds=1200) # at least 20 minutes at beginning of file needed for making it interictal
+    interictal_epoch = []
+
     # from 20 min in the dataframe, get the segments
     start = df.index[-1] // 2
-    segments = df.loc[start:start + pd.Timedelta(seconds = nr_segments * duration_segment), :].copy()
+    epoch_duration = pd.Timedelta(seconds = nr_segments * duration_segment)
+    if (start < inter_ictal_buffer) or (start+epoch_duration > df.index[-1]):
+        # check if file is too short for hosting a guarantueed interictal phase of specified length
+        print("file too short to host interictal sequence.")
+        segmentation_report = add_segmentation_report(segmentation_report, 'interictal_skipped', [epoch, start])
+        return interictal_epoch
+    segments = df.loc[start:start + epoch_duration, :].copy()
     # add segment numbers and epoch id
     segments['epoch'] = epoch
     segments['segment_id'] = [i for i in range(nr_segments) for _ in range(int(len(segments)/nr_segments))]
     segmentation_report = add_segmentation_report(
             segmentation_report, 'interictal_epochs', [epoch, start])
-    return segments
+    interictal_epoch.append(segments)
+    return interictal_epoch
+
+def load_segmented_unlabeled_data(file_path, channels=None):
+    """load edf-file and segment it to apply classification model."""
+    segment_duration = 1
+
+
+    # load edf into pandas df
+    if channels is None:
+        ch = None
+    else:
+        ch = channels.copy()
+        if 'T8-P8-1' in ch:
+            ch.remove('T8-P8-1')
+            ch.append('T8-P8')
+        if 'T8-P8-0' in ch:
+            ch.remove('T8-P8-0')
+            ch.append('T8-P8')
+    
+    file_path = Path(file_path)
+    raw = mne.io.read_raw_edf(file_path, preload=False, include=ch, verbose='ERROR')
+    sample_freq = str(1/raw.info['sfreq'] * 1E9) + 'N'
+    df = raw.to_data_frame(index='time')
+    time_index = pd.timedelta_range(start=0, periods=df.shape[0], freq=sample_freq)
+    df = df.set_index(time_index)
+
+
+    # do segmentation of whole file
+    nr_segments = int(len(df.index) // (segment_duration * raw.info['sfreq']))
+    crop_at = pd.Timedelta(seconds=nr_segments * segment_duration)
+    segments = df.loc[:crop_at,:].copy()
+    # add segment numbers and epoch id
+    # segments['epoch'] = 0
+    segments['segment_id'] = [i for i in range(nr_segments) for _ in range(int(len(segments)/nr_segments))]
+    
+    return  segments
+
 
 
 def load_segmented_data(root_dir=DATA_ROOT, 
@@ -413,6 +463,7 @@ def load_segmented_data(root_dir=DATA_ROOT,
 
     global segmentation_report
     segmentation_report = {
+        'dataread_error': [],
         'reached_file_start': [], 
         'reached_file_end': [],
         'seizure_too_small': [],
@@ -421,7 +472,8 @@ def load_segmented_data(root_dir=DATA_ROOT,
         'preictal_epochs': [],
         'interictal_epochs': [],
         'seizure_max_reached': [],
-        'incomplete_channels': []
+        'incomplete_channels': [],
+        'interictal_skipped': []
         }
     
     patient_list = get_patient_list(patient_ids=patient_ids)
@@ -437,6 +489,11 @@ def load_segmented_data(root_dir=DATA_ROOT,
 
         for session in session_list:
             df, is_seizure = return_pandas_df(patient=patient, session=session, summary=summary, channels=channels, target_freq=target_freq)
+            if df is None:
+                print("couldnt read data from edf ...")
+                segmentation_report = add_segmentation_report(
+                    segmentation_report, 'dataread_error', [patient, session])
+                continue
             if channels is not None and [c for c in channels if c not in df.columns]:
                 print("incomplete channels. skipping ...")
                 segmentation_report = add_segmentation_report(
@@ -455,7 +512,7 @@ def load_segmented_data(root_dir=DATA_ROOT,
                     )
                 )
             else:
-                session_dfs.append(interictal_segmentation_foo(
+                session_dfs.extend(interictal_segmentation_foo(
                     df, 
                     epoch = epoch_counter, 
                     duration_segment=segment_duration, 
@@ -581,64 +638,108 @@ def save_pyarrow_eeg_single(data=None, patient_id=[1,2,3,4]):
     return
 
 
+def load_file(file_name):
+    """convenience function for loading npy/arrow.
+
+    Args:
+        file_name: _description_
+
+    Returns:
+        _description_
+    """
+    if file_name.endswith('.arrow'):
+        return load_pyarrow(file_name=file_name)
+    elif file_name.endswith('.npy'):
+        print('loading npy')
+        return np.load('data/' + file_name, allow_pickle=True)
+    else:
+        print('no filename provided, trying npy')
+        try:
+            np.load('data/' + file_name + '.npy', allow_pickle=True)
+        except FileNotFoundError:
+            print('no npy file found, trying arrow')
+            return load_pyarrow(file_name=file_name + '.arrow')
+        
+def save_file(data, file_name):
+    """convenience function for saving npy/arrow.
+
+    Args:
+        data: _description_
+        file_name: _description_
+    """
+    if file_name is None:
+        print('skipping save file.')
+    elif file_name.endswith('.arrow'):
+        save_pyarrow(data, file_name=file_name)
+    elif file_name.endswith('.npy'):
+        print('saving npy')
+        np.save('data/' + file_name, data)
+    else:
+        print('no filetype provided, saving as npy')
+        np.save('data/' + file_name + '.npy', data)
+
+
 #%%
 if __name__ == "__main__":
 
     from constants import DEFAULT_PATIENTS, CHANNELS
 
 
-    # test get_patient_list
-    assert get_patient_list(patient_ids=[1,2,3,4]) == ['chb01', 'chb02', 'chb03', 'chb04']
-    # test get_patient_summary
-    assert get_patient_summary()[3]['seizure_end_time'] == 1066
-
-    # test segmented data retrieval
-    nr_segments = 20
-    segment_duration = 10
-    freq = 256
-    target_freq = 1
-    output = load_segmented_data(patient_ids=[17], 
-                                 nr_segments=nr_segments, 
-                                 segment_duration=segment_duration,
-                                 channels=CHANNELS,
-                                 target_freq=target_freq)
-    assert output[['epoch']].value_counts()[0] == segment_duration * nr_segments * freq * target_freq/freq
-    assert all(element == output[['epoch']].value_counts()[0] for element in output[['epoch']].value_counts())
-    assert all(element == (output['epoch'].max() + 1) * segment_duration * freq * target_freq/freq for element in output['segment_id'].value_counts())
-
-    output = load_segmented_data(patient_ids=[2], 
-                                 ictal_segmentation_foo=preictal_segmentation,
-                                 interictal_segmentation_foo=inter_segmentation,
-                                 nr_segments=nr_segments, segment_duration=segment_duration)
-    assert output['is_seizure'].sum() == 0
-    
-    # patients = import_patients(patient_ids=[1,2,3,4], target_freq=32, seizure_flag=True)
-    # print(patients.shape)
-
-
-    # save_pyarrow_eeg_large(patient_ids=[1,2,3,4])
+    load_segmented_unlabeled_data('./data/chb01/chb01_03.edf', channels=CHANNELS)
 
     
-    # patients = import_patients(patient_ids=[3])
-    # save_pyarrow_eeg_single()
+    # # test get_patient_list
+    # assert get_patient_list(patient_ids=[1,2,3,4]) == ['chb01', 'chb02', 'chb03', 'chb04']
+    # # test get_patient_summary
+    # assert get_patient_summary()[3]['seizure_end_time'] == 1066
 
-    # df = load_eeg_single_mem()
-    # print(df.mean())
+    # # test segmented data retrieval
+    # nr_segments = 20
+    # segment_duration = 10
+    # freq = 256
+    # target_freq = 1
+    # output = load_segmented_data(patient_ids=[17], 
+    #                              nr_segments=nr_segments, 
+    #                              segment_duration=segment_duration,
+    #                              channels=CHANNELS,
+    #                              target_freq=target_freq)
+    # assert output[['epoch']].value_counts()[0] == segment_duration * nr_segments * freq * target_freq/freq
+    # assert all(element == output[['epoch']].value_counts()[0] for element in output[['epoch']].value_counts())
+    # assert all(element == (output['epoch'].max() + 1) * segment_duration * freq * target_freq/freq for element in output['segment_id'].value_counts())
 
-    # print("single patient done.")
-    # print("done.")
-    # # print(get_session_list())
+    # output = load_segmented_data(patient_ids=[2], 
+    #                              ictal_segmentation_foo=preictal_segmentation,
+    #                              interictal_segmentation_foo=inter_segmentation,
+    #                              nr_segments=nr_segments, segment_duration=segment_duration)
+    # assert output['is_seizure'].sum() == 0
+    
+    # # patients = import_patients(patient_ids=[1,2,3,4], target_freq=32, seizure_flag=True)
+    # # print(patients.shape)
 
-    # patients = import_patients(patient_ids=[1,2,3,12], target_freq=32)
-    # save_pyarrow_eeg_large(patients)
-    # tic = time()
-    # patients.mean()
-    # print(time()- tic)
-    # del patients
 
-    # df = load_eeg_large_mem()
+    # # save_pyarrow_eeg_large(patient_ids=[1,2,3,4])
 
-    # tic = time()
-    # df.mean()
-    # print(f"{time()- tic}")
+    
+    # # patients = import_patients(patient_ids=[3])
+    # # save_pyarrow_eeg_single()
+
+    # # df = load_eeg_single_mem()
+    # # print(df.mean())
+
+    # # print("single patient done.")
+    # # print("done.")
+    # # # print(get_session_list())
+
+    # # patients = import_patients(patient_ids=[1,2,3,12], target_freq=32)
+    # # save_pyarrow_eeg_large(patients)
+    # # tic = time()
+    # # patients.mean()
+    # # print(time()- tic)
+    # # del patients
+
+    # # df = load_eeg_large_mem()
+
+    # # tic = time()
+    # # df.mean()
+    # # print(f"{time()- tic}")
 
