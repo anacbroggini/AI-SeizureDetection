@@ -20,7 +20,7 @@ def plot_confusion_matrix(y_true, y_pred, cmap='Blues'):
 
     # Calculate relative numbers
     cm_sum = np.sum(cm, axis=1, keepdims=True)
-    cm_perc = cm / cm.sum(axis=1)[:, np.newaxis]
+    cm_perc = cm / cm.sum(axis=1)[:, np.newaxis] * 100
 
     annot = np.empty_like(cm).astype(str)
     # get the dimensions
@@ -55,12 +55,21 @@ def plot_confusion_matrix(y_true, y_pred, cmap='Blues'):
 
 
 def plot_history_metrics(history):
+
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+
     for key in history.history.keys():
-        plt.plot(history.history[key], label=key)
+        if key.endswith("loss"):
+            ax2.plot(history.history[key], "--", label=key)
+        else:
+            ax1.plot(history.history[key], label=key)
 
     plt.xlabel('Epoch')
-    plt.ylabel('Metric value')
-    plt.legend()
+    ax1.set_ylabel('Metric Value')
+    ax2.set_ylabel('Loss Error')
+    ax1.legend(loc=0)
+    ax2.legend(loc=0)
     plt.grid(True)
 
 
