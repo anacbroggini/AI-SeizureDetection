@@ -367,15 +367,25 @@ def inter_segmentation(df, epoch=0, duration_segment=10, nr_segments=20):
 
     global segmentation_report    
 
+    inter_ictal_buffer= pd.Timedelta(seconds=1200) # at least 20 minutes at beginning of file needed for making it interictal
+    interictal_epoch = []
+
     # from 20 min in the dataframe, get the segments
     start = df.index[-1] // 2
-    segments = df.loc[start:start + pd.Timedelta(seconds = nr_segments * duration_segment), :].copy()
+    epoch_duration = pd.Timedelta(seconds = nr_segments * duration_segment)
+    if (start < inter_ictal_buffer) or (start+epoch_duration > df.index[-1]):
+        # check if file is too short for hosting a guarantueed interictal phase of specified length
+        print("file too short to host interictal sequence.")
+        segmentation_report = add_segmentation_report(segmentation_report, 'interictal_skipped', [epoch, start])
+        return interictal_epoch
+    segments = df.loc[start:start + epoch_duration, :].copy()
     # add segment numbers and epoch id
     segments['epoch'] = epoch
     segments['segment_id'] = [i for i in range(nr_segments) for _ in range(int(len(segments)/nr_segments))]
     segmentation_report = add_segmentation_report(
             segmentation_report, 'interictal_epochs', [epoch, start])
-    return segments
+    interictal_epoch.append(segments)
+    return interictal_epoch
 
 
 def load_segmented_data(root_dir=DATA_ROOT, 
@@ -421,7 +431,8 @@ def load_segmented_data(root_dir=DATA_ROOT,
         'preictal_epochs': [],
         'interictal_epochs': [],
         'seizure_max_reached': [],
-        'incomplete_channels': []
+        'incomplete_channels': [],
+        'interictal_skipped': []
         }
     
     patient_list = get_patient_list(patient_ids=patient_ids)
@@ -455,7 +466,7 @@ def load_segmented_data(root_dir=DATA_ROOT,
                     )
                 )
             else:
-                session_dfs.append(interictal_segmentation_foo(
+                session_dfs.extend(interictal_segmentation_foo(
                     df, 
                     epoch = epoch_counter, 
                     duration_segment=segment_duration, 
