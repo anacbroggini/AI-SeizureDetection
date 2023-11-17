@@ -24,7 +24,7 @@ def extract_features(df):
     abs_mean_agg = pd.NamedAgg(column='abs_mean', aggfunc=abs_mean)
 
 
-    df_features = df_pp.groupby(['seizure_id', 'segment_id', "is_seizure"]).agg(
+    df_features = df_pp.groupby(['segment_id']).agg(
         {C:[
             # 'mean', 
             'std',
@@ -42,6 +42,6 @@ def extract_features(df):
     df_features.reset_index(inplace=True)
     
     extracted_features = df_features 
-
+    extract_features = extracted_features.drop(['segment_id'], axis=1)
 
     return extracted_features

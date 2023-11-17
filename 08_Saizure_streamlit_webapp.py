@@ -13,7 +13,7 @@ import joblib
 import tempfile
 import os
 from source.constants import CHANNELS, FREQUENCY_RANGES
-import extract_features
+from extract_features import extract_features
 import scipy
 from scipy.signal import butter, lfilter
 
@@ -26,7 +26,7 @@ st.markdown("EEG data from CHb-MIT dataset --add more here--")
 from PIL import Image
 
 # Load the saved classification model
-model_path = "best_model.joblib"  
+model_path = "xgboost_model.joblib"  
 loaded_model = joblib.load(model_path)
 
 # Checkboxes to toggle visibility
@@ -116,11 +116,11 @@ def main():
             
 
             exclude_ranges=[[58, 62], [118, 122]]
-            filtered = filter_eeg_channels_web(edf_df_classifier, CHANNELS, fs=256, exclude_ranges=exclude_ranges, Q=30)
+            filtered = filter_eeg_channels(edf_df_classifier, CHANNELS, fs=256, exclude_ranges=exclude_ranges, Q=30)
                 
             # Extract features from the preprocessed data
             extracted_features = extract_features(filtered)
-
+            
             # Perform classification using the loaded model
             predictions = loaded_model.predict(extracted_features) 
 
