@@ -42,6 +42,6 @@ def extract_features(df):
     df_features.reset_index(inplace=True)
     
     extracted_features = df_features 
-    extract_features = extracted_features.drop(['segment_id'], axis=1)
+    extracted_features = extracted_features.drop(['segment_id'], axis=1)
 
     return extracted_features

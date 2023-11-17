@@ -132,7 +132,7 @@ def main():
             st.error(f'An error occurred during classification: {e}')
         finally:
             # Remove the temporary file
-            os.remove(temp_filepath)
+            #os.remove(temp_filepath)
 
 if __name__ == '__main__':
     main()
