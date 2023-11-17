@@ -393,7 +393,7 @@ def inter_segmentation(df, epoch=0, duration_segment=10, nr_segments=20):
 
 def load_segmented_unlabeled_data(file_path, channels=None):
     """load edf-file and segment it to apply classification model."""
-    segment_duration = 1
+    segment_duration = 5
 
 
     # load edf into pandas df
@@ -410,7 +410,7 @@ def load_segmented_unlabeled_data(file_path, channels=None):
     
     file_path = Path(file_path)
     raw = mne.io.read_raw_edf(file_path, preload=False, include=ch, verbose='ERROR')
-    sample_freq = str(1/raw.info['sfreq'] * 1E9) + 'N'
+    sample_freq = str(1/raw.info['sfreq'] * 1E9) + 'N' # in Nanoseconds
     df = raw.to_data_frame(index='time')
     time_index = pd.timedelta_range(start=0, periods=df.shape[0], freq=sample_freq)
     df = df.set_index(time_index)
@@ -419,7 +419,8 @@ def load_segmented_unlabeled_data(file_path, channels=None):
     # do segmentation of whole file
     nr_segments = int(len(df.index) // (segment_duration * raw.info['sfreq']))
     crop_at = pd.Timedelta(seconds=nr_segments * segment_duration)
-    segments = df.loc[:crop_at,:].copy()
+    iloc_idx = df.index.get_loc(crop_at)
+    segments = df.iloc[:iloc_idx,:].copy()
     # add segment numbers and epoch id
     # segments['epoch'] = 0
     segments['segment_id'] = [i for i in range(nr_segments) for _ in range(int(len(segments)/nr_segments))]
@@ -685,7 +686,8 @@ if __name__ == "__main__":
     from constants import DEFAULT_PATIENTS, CHANNELS
 
 
-    load_segmented_unlabeled_data('./data/chb01/chb01_03.edf', channels=CHANNELS)
+    unlabeled_df = load_segmented_unlabeled_data('./data/chb04/chb04_04.edf', channels=CHANNELS)
+    unlabeled_df = load_segmented_unlabeled_data('./data/chb04/chb04_05.edf', channels=CHANNELS)
 
     
     # # test get_patient_list
