@@ -8,12 +8,12 @@ from mne.io import  read_raw_edf
 import matplotlib.pyplot as plt
 import seaborn as sns
 from source import data_import
-from filter_eeg_channels_web import filter_eeg_channels
+from source.filter_eeg_channels_web import filter_eeg_channels
 import joblib
 import tempfile
 import os
 from source.constants import CHANNELS, FREQUENCY_RANGES
-from extract_features import extract_features
+from source.extract_features import extract_features
 import scipy
 from scipy.signal import butter, lfilter
 
@@ -39,12 +39,12 @@ st.subheader("A Visualization of the channels contained in the EEG Dataset")
 if show_visualization1:
     
     
-    image1 = Image.open('Channels Frequency.png')
+    image1 = Image.open('./source/Channels_Frequency.png')
     st.image(image1, caption='Overlay of Channels on Amplitude/Time axis', use_column_width=True)
 
 st.subheader('Variance plot top ten True/False Seizures')
 if show_visualization2:
-    image2 = Image.open('Variance plot top ten TrueFalse Seizures.png')
+    image2 = Image.open('./source/Variance_plot_top_ten.png')
     st.image(image2, caption='Variance plot top ten True/False Seizures', use_column_width=True)
 
 st.text("")

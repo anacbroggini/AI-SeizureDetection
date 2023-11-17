@@ -35,3 +35,11 @@ python -m venv .venv
 ```
 
 *Note: If there are errors during environment setup, try removing the versions from the failing packages in the requirements file.*
+
+
+
+## Streamlit app
+
+In some cases it is necessary to install the streamlit library
+
+pip install streamlit
