@@ -124,15 +124,27 @@ def main():
             # Perform classification using the loaded model
             predictions = loaded_model.predict(extracted_features) 
 
+            # Apply post-processing to identify seizures
+            seizure_threshold = 6
+            seizure_detected = np.convolve(predictions, np.ones(seizure_threshold), mode='valid') >= seizure_threshold
+
             # Display the classification result
             st.subheader('Classification Result:')
             st.write(predictions)
+            st.write(seizure_detected)
+
+            # Print "Seizure detected!!!" if a seizure is detected
+            
+            if any(seizure_detected):
+                st.subheader('Result:')
+                st.write("Seizure detected !!!")
+
 
         except Exception as e:
             st.error(f'An error occurred during classification: {e}')
         finally:
             # Remove the temporary file
-            #os.remove(temp_filepath)
+            os.remove(temp_filepath)
 
 if __name__ == '__main__':
     main()
