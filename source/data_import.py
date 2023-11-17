@@ -393,7 +393,7 @@ def inter_segmentation(df, epoch=0, duration_segment=10, nr_segments=20):
 
 def load_segmented_unlabeled_data(file_path, channels=None):
     """load edf-file and segment it to apply classification model."""
-    segment_duration = 1
+    segment_duration = 5
 
 
     # load edf into pandas df
