@@ -26,7 +26,7 @@ st.markdown("EEG data from CHb-MIT dataset --add more here--")
 from PIL import Image
 
 # Load the saved classification model
-model_path = "xgboost_model.joblib"  
+model_path = "best_xgboost_model.pkl"  
 loaded_model = joblib.load(model_path)
 
 # Checkboxes to toggle visibility
@@ -39,12 +39,12 @@ st.subheader("A Visualization of the channels contained in the EEG Dataset")
 if show_visualization1:
     
     
-    image1 = Image.open('./data/Channels Frequency.png')
+    image1 = Image.open('Channels Frequency.png')
     st.image(image1, caption='Overlay of Channels on Amplitude/Time axis', use_column_width=True)
 
 st.subheader('Variance plot top ten True/False Seizures')
 if show_visualization2:
-    image2 = Image.open('./data/Variance plot top ten TrueFalse Seizures.png')
+    image2 = Image.open('Variance plot top ten TrueFalse Seizures.png')
     st.image(image2, caption='Variance plot top ten True/False Seizures', use_column_width=True)
 
 st.text("")
@@ -130,14 +130,15 @@ def main():
 
             # Display the classification result
             st.subheader('Classification Result:')
-            st.write(predictions)
-            st.write(seizure_detected)
+            col1, col2 = st.columns(2)
+            col1.write(predictions)
+            col2.write(seizure_detected)
 
             # Print "Seizure detected!!!" if a seizure is detected
             
             if any(seizure_detected):
                 st.subheader('Result:')
-                st.write("Seizure detected !!!")
+                st.header("Seizure detected !!!")
 
 
         except Exception as e:
