@@ -112,6 +112,7 @@ def main():
 
             # Read and preprocess the EDF file
             edf_df_classifier = data_import.load_segmented_unlabeled_data(temp_filepath, channels=CHANNELS)
+            edf_df_classifier= edf_df_classifier.reset_index(drop=True)
             
 
             exclude_ranges=[[58, 62], [118, 122]]
