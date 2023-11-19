@@ -8,12 +8,12 @@ from mne.io import  read_raw_edf
 import matplotlib.pyplot as plt
 import seaborn as sns
 from source import data_import
-from filter_eeg_channels_web import filter_eeg_channels
+from source.filter_eeg_channels_web import filter_eeg_channels
 import joblib
 import tempfile
 import os
 from source.constants import CHANNELS, FREQUENCY_RANGES
-from extract_features import extract_features
+from source.extract_features import extract_features
 import scipy
 from scipy.signal import butter, lfilter
 
@@ -26,7 +26,8 @@ st.markdown("EEG data from CHb-MIT dataset --add more here--")
 from PIL import Image
 
 # Load the saved classification model
-loaded_model=joblib.load('best_xgboost_model.pkl')
+model_path = "Class_models/best_xgboost_model.pkl"  
+loaded_model = joblib.load(model_path)
 
 # Checkboxes to toggle visibility
 show_visualization1 = st.sidebar.checkbox("Show Channels Frequency", value=True)
@@ -38,12 +39,12 @@ st.subheader("A Visualization of the channels contained in the EEG Dataset")
 if show_visualization1:
     
     
-    image1 = Image.open('./data/Channels Frequency.png')
+    image1 = Image.open('Images/Channels_Frequency.png')
     st.image(image1, caption='Overlay of Channels on Amplitude/Time axis', use_column_width=True)
 
 st.subheader('Variance plot top ten True/False Seizures')
 if show_visualization2:
-    image2 = Image.open('./data/Variance plot top ten TrueFalse Seizures.png')
+    image2 = Image.open('Images/Variance_plot_top_ten.png')
     st.image(image2, caption='Variance plot top ten True/False Seizures', use_column_width=True)
 
 st.text("")
@@ -112,7 +113,6 @@ def main():
 
             # Read and preprocess the EDF file
             edf_df_classifier = data_import.load_segmented_unlabeled_data(temp_filepath, channels=CHANNELS)
-            edf_df_classifier= edf_df_classifier.reset_index(drop=True)
             
 
             exclude_ranges=[[58, 62], [118, 122]]
@@ -130,14 +130,15 @@ def main():
 
             # Display the classification result
             st.subheader('Classification Result:')
-            st.write(predictions)
-            st.write(seizure_detected)
+            col1, col2 = st.columns(2)
+            col1.write(predictions)
+            col2.write(seizure_detected)
 
             # Print "Seizure detected!!!" if a seizure is detected
             
             if any(seizure_detected):
                 st.subheader('Result:')
-                st.write("Seizure detected !!!")
+                st.header("Seizure detected !!!")
 
 
         except Exception as e:
