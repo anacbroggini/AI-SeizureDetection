@@ -26,7 +26,7 @@ st.markdown("EEG data from CHb-MIT dataset --add more here--")
 from PIL import Image
 
 # Load the saved classification model
-model_path = "best_xgboost_model.pkl"  
+model_path = "Class_models/best_xgboost_model.pkl"  
 loaded_model = joblib.load(model_path)
 
 # Checkboxes to toggle visibility
@@ -39,12 +39,20 @@ st.subheader("A Visualization of the channels contained in the EEG Dataset")
 if show_visualization1:
     
     
+<<<<<<< HEAD
     image1 = Image.open('./source/Channels_Frequency.png')
+=======
+    image1 = Image.open('Images/Channels_Frequency.png')
+>>>>>>> c7973de (cleanup)
     st.image(image1, caption='Overlay of Channels on Amplitude/Time axis', use_column_width=True)
 
 st.subheader('Variance plot top ten True/False Seizures')
 if show_visualization2:
+<<<<<<< HEAD
     image2 = Image.open('./source/Variance_plot_top_ten.png')
+=======
+    image2 = Image.open('Images/Variance_plot_top_ten.png')
+>>>>>>> c7973de (cleanup)
     st.image(image2, caption='Variance plot top ten True/False Seizures', use_column_width=True)
 
 st.text("")
