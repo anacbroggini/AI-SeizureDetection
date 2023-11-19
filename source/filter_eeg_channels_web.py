@@ -1,9 +1,6 @@
 import pandas as pd
 from scipy.signal import butter, lfilter
-<<<<<<< HEAD
-=======
 
->>>>>>> c7973de (cleanup)
 def filter_eeg_channels(df, channels, fs=256, exclude_ranges=None, Q=30):
     """
     Filter EEG channels in a DataFrame using band-stop filters.
