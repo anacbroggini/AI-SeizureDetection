@@ -16,7 +16,7 @@ execution functions:
 #%%
 
 from pathlib import Path
-from matplotlib.artist import get
+# from matplotlib.artist import get
 import numpy as np
 import pyarrow as pa
 import pandas as pd
@@ -115,6 +115,10 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
     
     returns pandas dataframe of session.
     '''
+
+
+    if summary is None:
+        summary = get_patient_summary(patient=patient)
     
     if channels is None:
         ch = None
@@ -687,8 +691,10 @@ def save_file(data, file_name):
 if __name__ == "__main__":
 
     from constants import DEFAULT_PATIENTS, CHANNELS
+    import os
+    # os.chdir('../')
 
-
+    df = return_pandas_df(patient='chb01', session='chb01_01.edf')
     unlabeled_df1 = load_segmented_unlabeled_data('./data/chb05/chb05_06.edf', channels=CHANNELS)
     unlabeled_df2 = load_segmented_unlabeled_data('./data/chb04/chb04_04.edf', channels=CHANNELS)
     unlabeled_df3 = load_segmented_unlabeled_data('./data/chb04/chb04_05.edf', channels=CHANNELS)
