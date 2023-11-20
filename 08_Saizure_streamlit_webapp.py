@@ -139,6 +139,9 @@ def main():
             if any(seizure_detected):
                 st.subheader('Result:')
                 st.header("Seizure detected !!!")
+            else:
+                st.subheader('Result:')
+                st.header("No seizure")
 
 
         except Exception as e:
