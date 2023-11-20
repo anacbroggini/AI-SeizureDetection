@@ -419,8 +419,11 @@ def load_segmented_unlabeled_data(file_path, channels=None):
     # do segmentation of whole file
     nr_segments = int(len(df.index) // (segment_duration * raw.info['sfreq']))
     crop_at = pd.Timedelta(seconds=nr_segments * segment_duration)
-    iloc_idx = df.index.get_loc(crop_at)
-    segments = df.iloc[:iloc_idx,:].copy()
+    if crop_at > df.index[-1]:
+        iloc_idx = None # exclusive slicing index exceeds data length by one timestep -> use whole data
+    else:
+        iloc_idx = df.index.get_loc(crop_at)
+    segments = df.iloc[:iloc_idx, :].copy()
     # add segment numbers and epoch id
     # segments['epoch'] = 0
     segments['segment_id'] = [i for i in range(nr_segments) for _ in range(int(len(segments)/nr_segments))]
@@ -686,8 +689,10 @@ if __name__ == "__main__":
     from constants import DEFAULT_PATIENTS, CHANNELS
 
 
-    unlabeled_df = load_segmented_unlabeled_data('./data/chb04/chb04_04.edf', channels=CHANNELS)
-    unlabeled_df = load_segmented_unlabeled_data('./data/chb04/chb04_05.edf', channels=CHANNELS)
+    unlabeled_df1 = load_segmented_unlabeled_data('./data/chb05/chb05_06.edf', channels=CHANNELS)
+    unlabeled_df2 = load_segmented_unlabeled_data('./data/chb04/chb04_04.edf', channels=CHANNELS)
+    unlabeled_df3 = load_segmented_unlabeled_data('./data/chb04/chb04_05.edf', channels=CHANNELS)
+    unlabeled_df4 = load_segmented_unlabeled_data('./data/chb04/chb04_06.edf', channels=CHANNELS)
 
     
     # # test get_patient_list
