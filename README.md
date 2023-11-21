@@ -34,12 +34,18 @@ python -m venv .venv
 .venv\Scripts\Activate.ps1
 ```
 
-*Note: If there are errors during environment setup, try removing the versions from the failing packages in the requirements file.*
-
-
-
 ## Streamlit app
 
 In some cases it is necessary to install the streamlit library
-
+```
 pip install streamlit
+```
+After successful Installation, we can run a streamlit script by typing in the Terminal:
+```
+streamlit run 08_Saizure_streamlit_webapp.py 
+```
+Inside the Streamlit app we can upload edf files that can be viewed.
+A Classifier will detect seizures inside the edf files. 
+
+
+*Note: If there are errors during environment setup, try removing the versions from the failing packages in the requirements file.*

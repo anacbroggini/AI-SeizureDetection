@@ -16,7 +16,7 @@ execution functions:
 #%%
 
 from pathlib import Path
-from matplotlib.artist import get
+# from matplotlib.artist import get
 import numpy as np
 import pyarrow as pa
 import pandas as pd
@@ -115,6 +115,10 @@ def return_pandas_df(root_dir=DATA_ROOT, patient=None, session=None, target_freq
     
     returns pandas dataframe of session.
     '''
+
+
+    if summary is None:
+        summary = get_patient_summary(patient=patient)
     
     if channels is None:
         ch = None
@@ -419,8 +423,16 @@ def load_segmented_unlabeled_data(file_path, channels=None):
     # do segmentation of whole file
     nr_segments = int(len(df.index) // (segment_duration * raw.info['sfreq']))
     crop_at = pd.Timedelta(seconds=nr_segments * segment_duration)
+<<<<<<< HEAD
     iloc_idx = df.index.get_loc(crop_at)
     segments = df.iloc[:iloc_idx,:].copy()
+=======
+    if crop_at > df.index[-1]:
+        iloc_idx = None # exclusive slicing index exceeds data length by one timestep -> use whole data
+    else:
+        iloc_idx = df.index.get_loc(crop_at)
+    segments = df.iloc[:iloc_idx, :].copy()
+>>>>>>> origin
     # add segment numbers and epoch id
     # segments['epoch'] = 0
     segments['segment_id'] = [i for i in range(nr_segments) for _ in range(int(len(segments)/nr_segments))]
@@ -684,8 +696,16 @@ def save_file(data, file_name):
 if __name__ == "__main__":
 
     from constants import DEFAULT_PATIENTS, CHANNELS
+    import os
+    # os.chdir('../')
 
+    df = return_pandas_df(patient='chb01', session='chb01_01.edf')
+    unlabeled_df1 = load_segmented_unlabeled_data('./data/chb05/chb05_06.edf', channels=CHANNELS)
+    unlabeled_df2 = load_segmented_unlabeled_data('./data/chb04/chb04_04.edf', channels=CHANNELS)
+    unlabeled_df3 = load_segmented_unlabeled_data('./data/chb04/chb04_05.edf', channels=CHANNELS)
+    unlabeled_df4 = load_segmented_unlabeled_data('./data/chb04/chb04_06.edf', channels=CHANNELS)
 
+<<<<<<< HEAD
     unlabeled_df = load_segmented_unlabeled_data('./data/chb04/chb04_04.edf', channels=CHANNELS)
     unlabeled_df = load_segmented_unlabeled_data('./data/chb04/chb04_05.edf', channels=CHANNELS)
 
@@ -715,6 +735,34 @@ if __name__ == "__main__":
     #                              nr_segments=nr_segments, segment_duration=segment_duration)
     # assert output['is_seizure'].sum() == 0
     
+=======
+    
+    # # test get_patient_list
+    # assert get_patient_list(patient_ids=[1,2,3,4]) == ['chb01', 'chb02', 'chb03', 'chb04']
+    # # test get_patient_summary
+    # assert get_patient_summary()[3]['seizure_end_time'] == 1066
+
+    # # test segmented data retrieval
+    # nr_segments = 20
+    # segment_duration = 10
+    # freq = 256
+    # target_freq = 1
+    # output = load_segmented_data(patient_ids=[17], 
+    #                              nr_segments=nr_segments, 
+    #                              segment_duration=segment_duration,
+    #                              channels=CHANNELS,
+    #                              target_freq=target_freq)
+    # assert output[['epoch']].value_counts()[0] == segment_duration * nr_segments * freq * target_freq/freq
+    # assert all(element == output[['epoch']].value_counts()[0] for element in output[['epoch']].value_counts())
+    # assert all(element == (output['epoch'].max() + 1) * segment_duration * freq * target_freq/freq for element in output['segment_id'].value_counts())
+
+    # output = load_segmented_data(patient_ids=[2], 
+    #                              ictal_segmentation_foo=preictal_segmentation,
+    #                              interictal_segmentation_foo=inter_segmentation,
+    #                              nr_segments=nr_segments, segment_duration=segment_duration)
+    # assert output['is_seizure'].sum() == 0
+    
+>>>>>>> origin
     # # patients = import_patients(patient_ids=[1,2,3,4], target_freq=32, seizure_flag=True)
     # # print(patients.shape)
 
