@@ -35,7 +35,7 @@ def barplot(y_true, y_pred, file_name=None):
     df.loc[4,'seizure'] = non_seizure_label
 
 
-    df['amount'] = df['amount'] / len(y_true) * 100
+    # df['amount'] = df['amount'] / len(y_true) * 100 # make it relative
     df.head()
 
     rel_pred = list(df.loc[df['prediction'] != true_label, 'amount'].values / df.loc[df['prediction'] == true_label, 'amount'].values * 100)
@@ -66,7 +66,7 @@ def barplot(y_true, y_pred, file_name=None):
 
     plt.xticks(fontsize=18, fontweight='bold', color=text_color)
     plt.xlabel(None, fontsize=18, fontweight='bold', color=text_color)
-    plt.ylabel('percentage of EEG sequences', fontsize=18, fontweight='bold', color=text_color)
+    plt.ylabel('Number of EEG sequences', fontsize=18, fontweight='bold', color=text_color)
     # ax.set(ylabel = 'percentage of samples')
     # ax.set(xlabel = None)
     plt.setp(ax.get_legend().get_texts(), fontsize='14') # for legend text
@@ -134,7 +134,7 @@ def plot_roc(y_true, y_pred, file_name=None):
     text_color = '#5a4275'
     custom_palette = ["#6A0572", "#AB83A1"]
     sns.set_palette(custom_palette)
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=(5,5))
 
 
     fpr, tpr, thresholds_rf = roc_curve(y_true, y_pred)
@@ -144,15 +144,15 @@ def plot_roc(y_true, y_pred, file_name=None):
     plt.plot([0, 1], [0, 1], 'k--')
     # plt.plot(fpr_keras, tpr_keras, label='Keras (area = {:.3f})'.format(auc_keras))
     sns.lineplot(x=fpr, y=tpr, label='RNN (area = {:.3f})'.format(auc_model), palette=custom_palette)
-    plt.xlabel('False positive rate', fontsize=14 ,font_weight='bold', color=text_color)
-    plt.ylabel('True positive rate', fontsize=14,font_weight='bold', color=text_color)
+    plt.xlabel('False positive rate', fontsize=16, color=text_color)
+    plt.ylabel('True positive rate', fontsize=16, color=text_color)
     plt.title('ROC curve', fontsize=20,fontweight='bold', color=text_color)
     plt.legend(loc='best', title_fontsize='16', fontsize='14', frameon=False, labelspacing=0.5, markerscale=1.5, prop={'weight': 'bold'})
-    plt.show()      
     
     if file_name is not None:
         plt.savefig('Images/' + file_name, bbox_inches='tight', transparent=True)
 
+    # plt.show()      
 
 if __name__ == "__main__":
     # execute only if run as a script
