@@ -33,7 +33,7 @@ loaded_model = joblib.load(model_path)
 show_visualization1 = st.sidebar.checkbox("Show Channels Frequency", value=True)
 show_visualization2 = st.sidebar.checkbox("Show Variance plot", value=True)
 
-st.subheader("A Visualization of the channels contained in the EEG Dataset")
+st.subheader("A Visualization of the channels contained in the EEG Dataset on the example of the CHB-MIT Dataset")
 
 # Content to be toggled
 if show_visualization1:
@@ -120,33 +120,53 @@ def main():
                 
             # Extract features from the preprocessed data
             extracted_features = extract_features(filtered)
-            
+
             # Perform classification using the loaded model
-            predictions = loaded_model.predict(extracted_features) 
+            predictions = loaded_model.predict(extracted_features)
 
             # Apply post-processing to identify seizures
             seizure_threshold = 6
             seizure_detected = np.convolve(predictions, np.ones(seizure_threshold), mode='valid') >= seizure_threshold
+            
+            # min_occurrence_duration = 6  # seconds
+            # min_occurrence_length = min_occurrence_duration // 5  # Convert to time points
+
+            # Detect start and end of occurrences
+            start_indices = np.where(seizure_detected & ~np.roll(seizure_detected, 1))[0]
+            end_indices = np.where(seizure_detected & ~np.roll(seizure_detected, -1))[0]
+            
+            # Filter out short occurrences
+            # filtered_occurrences = [(start, end) for start, end in zip(start_indices, end_indices) if end - start >= min_occurrence_length]
 
             # Display the classification result
             st.subheader('Classification Result:')
             #col1, col2 = st.columns(2)
             #col1.write(predictions)
+
+            # # Display the post-processed result
+            #col2.subheader('Post-Processed Result:')
             #col2.write(seizure_detected)
 
-            # Print "Seizure detected!!!" if a seizure is detected
-            
+            #Display start and end of occurrences
+            # occurrence_detected = len(filtered_occurrences) > 0
+            # if occurrence_detected:
+            #     st.subheader('Result:')
+            #     for start_index, end_index in filtered_occurrences:
+            #         detection_start_time = start_index * 5
+            #         detection_end_time = end_index * 5
+            #         st.write(f'Seizure detected from {detection_start_time} seconds to {detection_end_time} seconds')
+            # else:
+            #     st.header("No seizure")
+
+            # Display the classification result        
             if any(seizure_detected):
-                st.subheader('Result:')
                 st.header("Seizure detected !!!")
                 # Calculate detection timestamp
                 detection_index = np.argmax(seizure_detected)
                 detection_time_stamp = detection_index * 5
                 st.write(f'Detection Timestamp: {detection_time_stamp} seconds')
             else:
-                st.subheader('Result:')
-                st.header("No seizure")
-
+               st.header("No seizure")
 
         except Exception as e:
             st.error(f'An error occurred during classification: {e}')
