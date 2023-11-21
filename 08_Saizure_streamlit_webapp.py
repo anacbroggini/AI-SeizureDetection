@@ -29,13 +29,14 @@ from PIL import Image
 model_path = "Class_models/best_xgboost_model.pkl"  
 loaded_model = joblib.load(model_path)
 
-st.text("Dataset descritpion --add more here--")
-st.text("The edf file should contain 23 channels and a sampling rate of 256 Hz")
-st.text("")
+st.text("EDF File requirements:")
+channels = "'F4-C4', 'F3-C3', 'FT9-FT10', 'FZ-CZ', 'F7-T7', 'FP2-F4', 'T8-P8-1', 'T8-P8-0', 'FP1-F3', 'CZ-PZ'"
+st.text(f"The edf file should contain channels: {channels} ")
+st.text("and a sampling rate of 256 Hz")
 
 """
 # Classification  Webapp 
-Here's our first attempt at using data to create a classification webapp from User uploaded edf files:
+This our working prototype of a classification webapp from User uploaded edf files:
 """
 
 # Function to read EDF file and convert to DataFrame
@@ -177,21 +178,37 @@ def main():
 
             st.pyplot(fig)
             # Here we create a new df which counts the number of seizures and when they started and ended (in seconds)
-
+            
+            # Filter out rows with a difference of 6 between start_time and end_time
+            filtered_df = seizure_df[seizure_df['end_seizure'] - seizure_df['start_seizure'] >= 6]
+            
             # Apply post-processing to identify seizures
             seizure_threshold = 6
             seizure_detected = np.convolve(predictions, np.ones(seizure_threshold), mode='valid') >= seizure_threshold
-
+            
+            # Find all occurrences of seizures
+            seizure_occurrences = np.where(seizure_detected)[0]
+            
             # Display the classification result
             st.subheader('Classification Result:')
 
             # Display the classification result        
             if any(seizure_detected):
                 st.header("Seizure detected !!!")
-                # Calculate detection timestamp
-                detection_index = np.argmax(seizure_detected)
-                detection_time_stamp = detection_index * 5
-                st.write(f'Detection Timestamp: {detection_time_stamp} seconds')
+
+                # Display the filtered_df DataFrame in Streamlit
+                # st.subheader('Seizure Intervals:')
+                # st.dataframe(filtered_df)
+
+                # Write the seizure start and end times
+                for index, row in filtered_df.iterrows():
+                    start_time = row['start_seizure']
+                    end_time = row['end_seizure']
+                    st.write(f"Seizure starts at {start_time * 5} seconds and ends at {end_time * 5} seconds")
+
+                # detection_index = np.argmax(seizure_detected)
+                # detection_time_stamp = detection_index * 5
+                # st.write(f'Detection Timestamp: {detection_time_stamp} seconds')
             else:
                st.header("No seizure")
 
