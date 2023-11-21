@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def barplot(y_true, y_pred):
+def barplot(y_true, y_pred, file_name=None):
     """show in a paired barplot the amount of correctly predicted seizures and non-seizures
 
     Args:
@@ -40,15 +40,42 @@ def barplot(y_true, y_pred):
 
     rel_pred = list(df.loc[df['prediction'] != true_label, 'amount'].values / df.loc[df['prediction'] == true_label, 'amount'].values * 100)
 
+
+
+    sns.set(style="whitegrid")
+
+    #bar_color = '#b19ed5'
+    bar_edge_color = '#977cca'
+    background_color = "none"
+    text_color = '#5a4275'
+    custom_palette = ["#6A0572", "#AB83A1"]
+    sns.set_palette(custom_palette)
+
     fig, ax = plt.subplots(figsize=(10, 5))
 
-    sns.barplot(data=df, x='seizure', y='amount', hue='prediction')
+    sns.barplot(data=df, x='seizure', y='amount', hue='prediction',
+                    palette=custom_palette,
+                    edgecolor=bar_edge_color, 
+                    # alpha=0.7, 
+                    dodge=True, 
+                    saturation=0.8)
     # for i, bars in enumerate(ax.containers):
-    ax.bar_label(ax.containers[1], labels=[f"{x:.1f}%" for x in rel_pred],label_type='center', padding=3)
-    ax.set(ylabel = 'percentage of samples')
-    ax.set(xlabel = None)
-    # ax.bar_label(ax.containers[0], fmt='%.f%%')
-    # ax.bar_label(ax.containers[0], fmt='%.f%%')
+    ax.bar_label(ax.containers[1], labels=[f"{x:.1f}%" for x in rel_pred],label_type='center', padding=3,
+                    fontsize=18)
+    legend = plt.legend(fontsize=24, loc='upper left', frameon=False, labelspacing=0.5, markerscale=1.5, prop={'weight': 'bold'})
+
+    plt.xticks(fontsize=18, fontweight='bold', color=text_color)
+    plt.xlabel(None, fontsize=18, fontweight='bold', color=text_color)
+    plt.ylabel('percentage of samples', fontsize=18, fontweight='bold', color=text_color)
+    # ax.set(ylabel = 'percentage of samples')
+    # ax.set(xlabel = None)
+    plt.setp(ax.get_legend().get_texts(), fontsize='14') # for legend text
+
+    plt.gca().set_facecolor('none')
+
+    if file_name is not None:
+        plt.savefig('Images/' + file_name, bbox_inches='tight', transparent=True)
+
 
 def ana_barplot():
     sns.set(style="whitegrid")
@@ -65,7 +92,13 @@ def ana_barplot():
     # Create a bar plot for the average number of patients per age and gender with a transparent background
     plt.figure(figsize=(12, 6))
     bar_width = 0.7
-    sns.barplot(x='Age Group', y='Number of Patients', hue='gender', data=df.groupby(['Age Group', 'gender']).size().reset_index().rename(columns={0: 'Number of Patients'}), ci=None, palette=custom_palette,edgecolor=bar_edge_color, alpha=0.7, dodge=True, saturation=0.8)
+    sns.barplot(x='Age Group', y='Number of Patients', hue='gender', data=df.groupby(['Age Group', 'gender']).size().reset_index().rename(columns={0: 'Number of Patients'}), 
+                    ci=None, 
+                    palette=custom_palette,
+                    edgecolor=bar_edge_color, 
+                    alpha=0.7, 
+                    dodge=True, 
+                    saturation=0.8)
 
     # Set labels and title
     plt.title('Average Number of Patients per Age Group and Gender', fontsize=20,fontweight='bold', color=text_color)
