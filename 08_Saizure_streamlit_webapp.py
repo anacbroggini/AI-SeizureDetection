@@ -54,9 +54,10 @@ def main():
     # User file upload for EDF files (Viewer)
     uploaded_file_viewer = st.file_uploader('Upload an EDF file for viewing:', type=['edf'], key='viewer')
 
-    """## This is the fun part, we are going to use a classifier on the data and predict the outcome. """
-    """Precisely we want to predict if the patient has a seizure or not. :) """
-    
+    """## This is the fun part, we are going to detect seizures in the data. """
+    """Compared to the traditional method of identifying seizures manually by hand from an expert, """
+    """We are going to use a machine learning model to do this for us in a much faster time. :)"""
+  
     # User file upload for EDF files (Classifier)
     uploaded_file_classifier = st.file_uploader('Upload an EDF file for classification:', type=['edf'], key='classifier')
 
